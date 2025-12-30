@@ -181,9 +181,9 @@ not a requirement. It includes:
 
 | Platform | Language | Repository | Package |
 |----------|----------|------------|---------|
-| **Flutter** | Dart | [synheart-core-dart](../synheart-core-dart) | `synheart_core` |
-| **Android** | Kotlin | [synheart-core-kotlin](../synheart-core-kotlin) | `ai.synheart:core-sdk` |
-| **iOS** | Swift | [synheart-core-swift](../synheart-core-swift) | `SynheartCore` |
+| **Flutter** | Dart | [synheart-core-dart](https://github.com/synheart-ai/synheart-core-dart) | `synheart_core` |
+| **Android** | Kotlin | [synheart-core-kotlin](https://github.com/synheart-ai/synheart-core-kotlin) | `ai.synheart:core-sdk` |
+| **iOS** | Swift | [synheart-core-swift](https://github.com/synheart-ai/synheart-core-swift) | `SynheartCore` |
 
 ## Governance & Evolution
 
