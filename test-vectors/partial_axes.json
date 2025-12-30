@@ -1,0 +1,45 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:07:00Z",
+  "computed_at_utc": "2025-12-28T00:07:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0"
+  },
+  "window_ids": ["w1", "w2"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:06:50Z",
+      "end": "2025-12-28T00:07:00Z",
+      "label": "10s_window"
+    },
+    "w2": {
+      "start": "2025-12-28T00:06:00Z",
+      "end": "2025-12-28T00:07:00Z",
+      "label": "60s_window"
+    }
+  },
+  "axes": {
+    "affect": {
+      "readings": [
+        {
+          "axis": "valence",
+          "score": 0.51,
+          "confidence": 0.57,
+          "window_id": "w2",
+          "direction": "higher_is_more"
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "intent": "Test vector: partial axes (affect only), no embeddings, no sources."
+  }
+}
+
+

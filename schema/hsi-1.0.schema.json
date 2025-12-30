@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/hsi/schema/hsi-1.0.schema.json",
+  "title": "Human State Interface (HSI) 1.0",
+  "type": "object",
+  "additionalProperties": false,
+
+  "$comment": "HSI is a contract-only interface. This schema is Draft 2020-12. Some reference-integrity constraints (e.g., windows/sources keys matching *_ids) cannot be fully enforced in pure JSON Schema and MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance. AJV validators may additionally enforce some references via $data where supported.",
+
+  "required": [
+    "hsi_version",
+    "observed_at_utc",
+    "computed_at_utc",
+    "producer",
+    "window_ids",
+    "windows",
+    "privacy"
+  ],
+
+  "properties": {
+    "hsi_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+
+    "observed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "$comment": "Event-time: the human state time (typically aligns with the latest window end)."
+    },
+
+    "computed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "$comment": "Processing-time: when this payload was produced. Must be >= observed_at_utc (enforced out-of-band unless validator supports format comparisons)."
+    },
+
+    "producer": { "$ref": "#/$defs/producer" },
+
+    "window_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+
+    "windows": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/window" },
+      "$comment": "HSI-VALIDATE-STRICT: windows object keys MUST be a subset of /window_ids, and every id in /window_ids MUST exist as a key in /windows."
+    },
+
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/source" },
+      "$comment": "HSI-VALIDATE-STRICT: sources object keys MUST be a subset of /source_ids, and every id in /source_ids MUST exist as a key in /sources."
+    },
+
+    "axes": { "$ref": "#/$defs/axes" },
+
+    "embeddings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/embedding" }
+    },
+
+    "privacy": { "$ref": "#/$defs/privacy" },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" }
+        ]
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "If one of sources/source_ids exists, require the other (pair integrity).",
+      "if": { "required": ["sources"] },
+      "then": { "required": ["source_ids"] }
+    },
+    {
+      "if": { "required": ["source_ids"] },
+      "then": { "required": ["sources"] }
+    }
+  ],
+
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$"
+    },
+
+    "score01": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "instance_id": { "type": "string", "format": "uuid" }
+      }
+    },
+
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "label": { "type": "string" }
+      },
+      "$comment": "HSI-VALIDATE-STRICT: window.end MUST be >= window.start (out-of-band unless validator supports format comparisons)."
+    },
+
+    "axis_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+
+    "direction": {
+      "type": "string",
+      "enum": ["higher_is_more", "higher_is_less", "bidirectional"]
+    },
+
+    "axis_reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis", "score", "confidence", "window_id"],
+      "properties": {
+        "axis": { "$ref": "#/$defs/axis_name" },
+        "score": {
+          "anyOf": [
+            { "$ref": "#/$defs/score01" },
+            { "type": "null" }
+          ],
+          "$comment": "RFC-0005: score MAY be null when a producer cannot compute a reading due to access-control, missing sources, or other constraints. Consumers MUST NOT interpret null as zero; explanation should be provided in meta."
+        },
+        "confidence": { "$ref": "#/$defs/score01" },
+
+        "window_id": {
+          "allOf": [
+            { "$ref": "#/$defs/id" },
+            {
+              "enum": { "$data": "/window_ids" },
+              "$comment": "AJV $data (optional): window_id SHOULD reference a declared id in /window_ids. Enforce out-of-band if $data unsupported."
+            }
+          ]
+        },
+
+        "direction": { "$ref": "#/$defs/direction" },
+
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "Optional: recommended for behavior-like metrics (e.g., px_per_second, count)."
+        },
+
+        "evidence_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              { "$ref": "#/$defs/id" },
+              {
+                "enum": { "$data": "/source_ids" },
+                "$comment": "AJV $data (optional): entries SHOULD reference /source_ids when sources are present. Enforce out-of-band if $data unsupported."
+              }
+            ]
+          }
+        },
+
+        "notes": { "type": "string" }
+      }
+    },
+
+    "axes_domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readings"],
+      "properties": {
+        "readings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/axis_reading" }
+        }
+      }
+    },
+
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "affect": { "$ref": "#/$defs/axes_domain" },
+        "engagement": { "$ref": "#/$defs/axes_domain" },
+        "behavior": { "$ref": "#/$defs/axes_domain" }
+      }
+    },
+
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "quality", "degraded"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"]
+        },
+        "quality": { "$ref": "#/$defs/score01" },
+        "degraded": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_id", "dimension", "encoding", "confidence"],
+      "properties": {
+        "window_id": {
+          "allOf": [
+            { "$ref": "#/$defs/id" },
+            {
+              "enum": { "$data": "/window_ids" },
+              "$comment": "AJV $data (optional): embedding.window_id SHOULD reference /window_ids. Enforce out-of-band if $data unsupported."
+            }
+          ]
+        },
+
+        "vector": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "number" },
+          "$comment": "Optional: include only when privacy allows."
+        },
+
+        "vector_hash": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "Recommended even if vector is present (e.g., sha256:...)."
+        },
+
+        "dimension": {
+          "type": "integer",
+          "minimum": 1
+        },
+
+        "encoding": {
+          "type": "string",
+          "enum": ["float32", "float64", "fp16", "int8"]
+        },
+
+        "confidence": { "$ref": "#/$defs/score01" },
+        "model": { "type": "string" }
+      },
+
+      "allOf": [
+        {
+          "$comment": "At least one of vector or vector_hash SHOULD be present. Strictly enforce if desired by making this a 'required' via oneOf.",
+          "anyOf": [
+            { "required": ["vector"] },
+            { "required": ["vector_hash"] }
+          ]
+        }
+      ]
+    },
+
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_pii", "raw_biosignals_allowed", "derived_metrics_allowed"],
+      "properties": {
+        "contains_pii": { "const": false },
+
+        "raw_biosignals_allowed": { "type": "boolean" },
+        "derived_metrics_allowed": { "type": "boolean" },
+        "embedding_allowed": { "type": "boolean", "default": false },
+
+        "consent": {
+          "type": "string",
+          "enum": ["none", "implicit", "explicit"]
+        },
+
+        "purposes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

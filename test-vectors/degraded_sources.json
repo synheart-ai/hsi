@@ -1,0 +1,57 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:05:00Z",
+  "computed_at_utc": "2025-12-28T00:05:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0"
+  },
+  "window_ids": ["w1"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:04:00Z",
+      "end": "2025-12-28T00:05:00Z",
+      "label": "60s_window"
+    }
+  },
+  "source_ids": ["s_sensor_a", "s_sensor_b"],
+  "sources": {
+    "s_sensor_a": {
+      "type": "sensor",
+      "quality": 0.22,
+      "degraded": true,
+      "notes": "Degraded source: low quality."
+    },
+    "s_sensor_b": {
+      "type": "sensor",
+      "quality": 0.49,
+      "degraded": true,
+      "notes": "Degraded source: intermittent availability."
+    }
+  },
+  "axes": {
+    "affect": {
+      "readings": [
+        {
+          "axis": "stress",
+          "score": 0.4,
+          "confidence": 0.35,
+          "window_id": "w1",
+          "direction": "higher_is_more",
+          "evidence_source_ids": ["s_sensor_a", "s_sensor_b"],
+          "notes": "Stress estimated with degraded inputs."
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "intent": "Test vector: declared sources are degraded; readings cite degraded sources."
+  }
+}
+
+

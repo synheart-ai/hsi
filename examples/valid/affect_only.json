@@ -1,0 +1,49 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:00:10Z",
+  "computed_at_utc": "2025-12-28T00:00:10Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0",
+    "instance_id": "0b6f3ac9-62f5-4c9f-9f0d-4c4b3f6b2a3b"
+  },
+  "window_ids": ["w1"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:00:00Z",
+      "end": "2025-12-28T00:00:10Z",
+      "label": "10s_window"
+    }
+  },
+  "axes": {
+    "affect": {
+      "readings": [
+        {
+          "axis": "valence",
+          "score": 0.62,
+          "confidence": 0.71,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        },
+        {
+          "axis": "arousal",
+          "score": 0.44,
+          "confidence": 0.68,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "notes": "No PII; affect-only payload."
+  },
+  "meta": {
+    "intent": "Valid example: affect domain only."
+  }
+}
+
+

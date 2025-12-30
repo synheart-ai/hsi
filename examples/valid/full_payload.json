@@ -1,0 +1,95 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:02:00Z",
+  "computed_at_utc": "2025-12-28T00:02:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0",
+    "instance_id": "d9776c5c-7a2e-4f7e-a827-7db9b2e2edc1"
+  },
+  "window_ids": ["w1", "w2"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:01:50Z",
+      "end": "2025-12-28T00:02:00Z",
+      "label": "10s_window"
+    },
+    "w2": {
+      "start": "2025-12-28T00:01:00Z",
+      "end": "2025-12-28T00:02:00Z",
+      "label": "60s_window"
+    }
+  },
+  "source_ids": ["s_wearable", "s_app"],
+  "sources": {
+    "s_wearable": {
+      "type": "sensor",
+      "quality": 0.83,
+      "degraded": false,
+      "notes": "Generic sensor source; no device assumptions."
+    },
+    "s_app": {
+      "type": "app",
+      "quality": 0.74,
+      "degraded": false
+    }
+  },
+  "axes": {
+    "affect": {
+      "readings": [
+        {
+          "axis": "stress",
+          "score": 0.31,
+          "confidence": 0.64,
+          "window_id": "w2",
+          "direction": "higher_is_more",
+          "evidence_source_ids": ["s_wearable", "s_app"]
+        },
+        {
+          "axis": "calm",
+          "score": 0.69,
+          "confidence": 0.61,
+          "window_id": "w2",
+          "direction": "higher_is_more",
+          "evidence_source_ids": ["s_wearable"]
+        }
+      ]
+    },
+    "behavior": {
+      "readings": [
+        {
+          "axis": "attention",
+          "score": 0.73,
+          "confidence": 0.58,
+          "window_id": "w1",
+          "direction": "higher_is_more",
+          "evidence_source_ids": ["s_app"]
+        }
+      ]
+    }
+  },
+  "embeddings": [
+    {
+      "window_id": "w1",
+      "vector": [0.12, -0.03, 0.44, 0.09],
+      "dimension": 4,
+      "encoding": "float32",
+      "confidence": 0.52,
+      "model": "example.invalid/model/example-embed-1"
+    }
+  ],
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true,
+    "embedding_allowed": true,
+    "consent": "explicit",
+    "purposes": ["research", "personalization"],
+    "notes": "Embedding included; treat as sensitive."
+  },
+  "meta": {
+    "intent": "Valid example: affect + behavior + sources + embedding."
+  }
+}
+
+

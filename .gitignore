@@ -1,0 +1,6 @@
+tests/__pycache__/
+__pycache__/
+.DS_Store
+.vscode/
+.idea/
+.pytest_cache/

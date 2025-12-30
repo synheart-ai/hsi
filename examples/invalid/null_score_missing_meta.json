@@ -1,0 +1,36 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:12:00Z",
+  "computed_at_utc": "2025-12-28T00:12:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0"
+  },
+  "window_ids": ["w1"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:11:00Z",
+      "end": "2025-12-28T00:12:00Z"
+    }
+  },
+  "axes": {
+    "behavior": {
+      "readings": [
+        {
+          "axis": "attention",
+          "score": null,
+          "confidence": 0.5,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  }
+}
+
+
