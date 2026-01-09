@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/hsi/schema/hsi-1.0.schema.json",
+  "$id": "https://raw.githubusercontent.com/synheart-ai/hsi/main/schema/hsi-1.0.schema.json",
   "title": "Human State Interface (HSI) 1.0",
   "type": "object",
   "additionalProperties": false,
@@ -153,22 +153,14 @@
       "properties": {
         "axis": { "$ref": "#/$defs/axis_name" },
         "score": {
-          "anyOf": [
-            { "$ref": "#/$defs/score01" },
-            { "type": "null" }
-          ],
+          "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
           "$comment": "RFC-0005: score MAY be null when a producer cannot compute a reading due to access-control, missing sources, or other constraints. Consumers MUST NOT interpret null as zero; explanation should be provided in meta."
         },
         "confidence": { "$ref": "#/$defs/score01" },
 
         "window_id": {
-          "allOf": [
-            { "$ref": "#/$defs/id" },
-            {
-              "enum": { "$data": "/window_ids" },
-              "$comment": "AJV $data (optional): window_id SHOULD reference a declared id in /window_ids. Enforce out-of-band if $data unsupported."
-            }
-          ]
+          "$ref": "#/$defs/id",
+          "$comment": "window_id SHOULD reference a declared id in /window_ids. Cross-reference validation enforced out-of-band."
         },
 
         "direction": { "$ref": "#/$defs/direction" },
@@ -183,13 +175,8 @@
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "allOf": [
-              { "$ref": "#/$defs/id" },
-              {
-                "enum": { "$data": "/source_ids" },
-                "$comment": "AJV $data (optional): entries SHOULD reference /source_ids when sources are present. Enforce out-of-band if $data unsupported."
-              }
-            ]
+            "$ref": "#/$defs/id",
+            "$comment": "entries SHOULD reference /source_ids when sources are present. Cross-reference validation enforced out-of-band."
           }
         },
 
@@ -226,7 +213,14 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"]
+          "enum": [
+            "sensor",
+            "app",
+            "self_report",
+            "observer",
+            "derived",
+            "other"
+          ]
         },
         "quality": { "$ref": "#/$defs/score01" },
         "degraded": { "type": "boolean" },
@@ -240,13 +234,8 @@
       "required": ["window_id", "dimension", "encoding", "confidence"],
       "properties": {
         "window_id": {
-          "allOf": [
-            { "$ref": "#/$defs/id" },
-            {
-              "enum": { "$data": "/window_ids" },
-              "$comment": "AJV $data (optional): embedding.window_id SHOULD reference /window_ids. Enforce out-of-band if $data unsupported."
-            }
-          ]
+          "$ref": "#/$defs/id",
+          "$comment": "embedding.window_id SHOULD reference /window_ids. Cross-reference validation enforced out-of-band."
         },
 
         "vector": {
@@ -279,10 +268,7 @@
       "allOf": [
         {
           "$comment": "At least one of vector or vector_hash SHOULD be present. Strictly enforce if desired by making this a 'required' via oneOf.",
-          "anyOf": [
-            { "required": ["vector"] },
-            { "required": ["vector_hash"] }
-          ]
+          "anyOf": [{ "required": ["vector"] }, { "required": ["vector_hash"] }]
         }
       ]
     },
@@ -290,7 +276,11 @@
     "privacy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["contains_pii", "raw_biosignals_allowed", "derived_metrics_allowed"],
+      "required": [
+        "contains_pii",
+        "raw_biosignals_allowed",
+        "derived_metrics_allowed"
+      ],
       "properties": {
         "contains_pii": { "const": false },
 
