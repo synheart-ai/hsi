@@ -20,7 +20,7 @@
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "valence",
@@ -38,7 +38,7 @@
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Test vector: partial axes (affect only), no embeddings, no sources."
+    "intent": "Test vector: partial axes (physiological only), no embeddings, no sources."
   }
 }
 

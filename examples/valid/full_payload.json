@@ -35,7 +35,7 @@
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "stress",
@@ -112,7 +112,7 @@
     "notes": "Embedding included; treat as sensitive."
   },
   "meta": {
-    "intent": "Valid example: affect + behavior + context + sources + embedding.",
+    "intent": "Valid example: physiological + behavior + context + sources + embedding.",
     "provenance": {
       "baseline_status": "READY",
       "inference_mode": "deterministic",

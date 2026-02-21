@@ -193,7 +193,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "affect": { "$ref": "#/$defs/axes_domain" },
+        "physiological": { "$ref": "#/$defs/axes_domain" },
         "engagement": { "$ref": "#/$defs/axes_domain" },
         "behavior": { "$ref": "#/$defs/axes_domain" },
         "context": { "$ref": "#/$defs/axes_domain" }

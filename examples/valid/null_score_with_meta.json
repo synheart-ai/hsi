@@ -15,7 +15,7 @@
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "stress",

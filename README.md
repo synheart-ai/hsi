@@ -18,7 +18,7 @@ the canonical payload structure, field semantics, validation schema,
 versioning rules, and reference test vectors.
 
 HSI enables interoperability between producers and consumers of inferred
-human state (e.g., affect, focus, engagement, recovery) without requiring
+human state (e.g., physiological signals, focus, engagement, recovery) without requiring
 shared models, shared SDKs, or shared infrastructure.
 
 
@@ -93,7 +93,7 @@ for human-state outputs — independent of devices, models, or vendors.
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "valence",
@@ -133,17 +133,17 @@ for human-state outputs — independent of devices, models, or vendors.
     "contains_pii": false,
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true,
-    "notes": "No PII; affect + context payload."
+    "notes": "No PII; physiological + context payload."
   },
   "meta": {
-    "intent": "Valid example: affect + context domains."
+    "intent": "Valid example: physiological + context domains."
   }
 }
 ```
 
 ### Notes on axes, null readings, and embeddings
 
-- **Axis domains**: HSI 1.1 groups readings under `axes.affect`, `axes.behavior`, `axes.engagement`, and `axes.context`. The context domain (added in RFC-HSI-0006) carries numeric runtime-condition qualifiers used to interpret other axes.
+- **Axis domains**: HSI 1.1 groups readings under `axes.physiological`, `axes.behavior`, `axes.engagement`, and `axes.context`. The context domain (added in RFC-HSI-0006) carries numeric runtime-condition qualifiers used to interpret other axes.
 - **Null readings**: A producer MAY include an axis reading with `score: null` when the reading is unavailable (e.g., access-control, missing sources). A null score MUST be accompanied by an explanation (typically in `meta`) and MUST NOT be interpreted as zero.
 - **Embeddings**: If `embeddings[]` is present, each embedding includes `dimension`, `encoding`, and `confidence`, and includes at least one of `vector` and/or `vector_hash`. Consumers MUST NOT assume vectors are always present.
 

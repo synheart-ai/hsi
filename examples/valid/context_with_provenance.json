@@ -16,7 +16,7 @@
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "valence",

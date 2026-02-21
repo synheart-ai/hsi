@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Renamed axes domain `affect` to `physiological` for semantic neutrality and wearable data inclusivity
+- Renamed example file: `affect_only.json` -> `physiological_only.json`
 - Schema file: `schema/hsi-1.1.schema.json` (replaces `hsi-1.0.schema.json` as canonical)
 - All examples and test vectors updated to `hsi_version: "1.1"`
 - RFC-HSI-0006 status changed from Draft to Accepted

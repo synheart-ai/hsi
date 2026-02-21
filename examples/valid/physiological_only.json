@@ -16,7 +16,7 @@
     }
   },
   "axes": {
-    "affect": {
+    "physiological": {
       "readings": [
         {
           "axis": "valence",
@@ -39,10 +39,10 @@
     "contains_pii": false,
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true,
-    "notes": "No PII; affect-only payload."
+    "notes": "No PII; physiological-only payload."
   },
   "meta": {
-    "intent": "Valid example: affect domain only."
+    "intent": "Valid example: physiological domain only."
   }
 }
 
