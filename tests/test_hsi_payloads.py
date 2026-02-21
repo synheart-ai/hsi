@@ -13,7 +13,7 @@ from tests.hsi_validate import validate_strict
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = REPO_ROOT / "schema" / "hsi-1.0.schema.json"
+SCHEMA_PATH = REPO_ROOT / "schema" / "hsi-1.1.schema.json"
 
 
 @pytest.fixture(scope="session")

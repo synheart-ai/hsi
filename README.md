@@ -1,6 +1,6 @@
 ## Human State Interface (HSI)
 
-[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](schema/hsi-1.0.schema.json)
+[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](schema/hsi-1.1.schema.json)
 [![Schema](https://img.shields.io/badge/schema-JSON%20Draft%202020--12-green.svg)](https://json-schema.org/draft/2020-12/schema)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![RFC](https://img.shields.io/badge/RFC-0005-purple.svg)](docs/RFC-0005-hsi-canonical-contract.md)
@@ -66,7 +66,7 @@ for human-state outputs — independent of devices, models, or vendors.
 ### Specification entry points
 
 - **Authoritative RFC**: `docs/RFC-0005-hsi-canonical-contract.md`
-- **Validation schema (HSI 1.0)**: `schema/hsi-1.0.schema.json`
+- **Validation schema (HSI 1.1)**: `schema/hsi-1.1.schema.json`
 - **Versioning policy**: `versioning.md`
 - **Security and privacy**: `SECURITY.md`
 - **Examples**: `examples/`
@@ -76,7 +76,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 ```json
 {
-  "hsi_version": "1.0",
+  "hsi_version": "1.1",
   "observed_at_utc": "2025-12-28T00:00:10Z",
   "computed_at_utc": "2025-12-28T00:00:10Z",
   "producer": {
@@ -110,23 +110,40 @@ for human-state outputs — independent of devices, models, or vendors.
           "direction": "higher_is_more"
         }
       ]
+    },
+    "context": {
+      "readings": [
+        {
+          "axis": "activity_still_conf",
+          "score": 0.93,
+          "confidence": 0.88,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        },
+        {
+          "axis": "baseline_ready",
+          "score": 1,
+          "confidence": 1.0,
+          "window_id": "w1"
+        }
+      ]
     }
   },
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true,
-    "notes": "No PII; affect-only payload."
+    "notes": "No PII; affect + context payload."
   },
   "meta": {
-    "intent": "Valid example: affect domain only."
+    "intent": "Valid example: affect + context domains."
   }
 }
 ```
 
 ### Notes on axes, null readings, and embeddings
 
-- **Axis domains**: HSI 1.0 groups readings under `axes.affect`, `axes.behavior`, and `axes.engagement`.
+- **Axis domains**: HSI 1.1 groups readings under `axes.affect`, `axes.behavior`, `axes.engagement`, and `axes.context`. The context domain (added in RFC-HSI-0006) carries numeric runtime-condition qualifiers used to interpret other axes.
 - **Null readings**: A producer MAY include an axis reading with `score: null` when the reading is unavailable (e.g., access-control, missing sources). A null score MUST be accompanied by an explanation (typically in `meta`) and MUST NOT be interpreted as zero.
 - **Embeddings**: If `embeddings[]` is present, each embedding includes `dimension`, `encoding`, and `confidence`, and includes at least one of `vector` and/or `vector_hash`. Consumers MUST NOT assume vectors are always present.
 
@@ -136,7 +153,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 This repo includes a small test suite that validates:
 
-- **HSI-VALIDATE-BASIC**: Draft 2020-12 structural + range validation against `schema/hsi-1.0.schema.json`
+- **HSI-VALIDATE-BASIC**: Draft 2020-12 structural + range validation against `schema/hsi-1.1.schema.json`
 - **HSI-VALIDATE-STRICT**: additional cross-field integrity checks (e.g., `window_id` references, time ordering)
 
 Run locally:

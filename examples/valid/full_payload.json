@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.0",
+  "hsi_version": "1.1",
   "observed_at_utc": "2025-12-28T00:02:00Z",
   "computed_at_utc": "2025-12-28T00:02:00Z",
   "producer": {
@@ -66,6 +66,30 @@
           "evidence_source_ids": ["s_app"]
         }
       ]
+    },
+    "context": {
+      "readings": [
+        {
+          "axis": "activity_still_conf",
+          "score": 0.85,
+          "confidence": 0.92,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        },
+        {
+          "axis": "baseline_ready",
+          "score": 1,
+          "confidence": 1.0,
+          "window_id": "w2"
+        },
+        {
+          "axis": "baseline_maturity",
+          "score": 0.68,
+          "confidence": 0.90,
+          "window_id": "w2",
+          "direction": "higher_is_more"
+        }
+      ]
     }
   },
   "embeddings": [
@@ -88,7 +112,12 @@
     "notes": "Embedding included; treat as sensitive."
   },
   "meta": {
-    "intent": "Valid example: affect + behavior + sources + embedding."
+    "intent": "Valid example: affect + behavior + context + sources + embedding.",
+    "provenance": {
+      "baseline_status": "READY",
+      "inference_mode": "deterministic",
+      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+    }
   }
 }
 
