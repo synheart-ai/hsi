@@ -1,0 +1,69 @@
+{
+  "hsi_version": "1.1",
+  "observed_at_utc": "2026-02-21T12:00:10Z",
+  "computed_at_utc": "2026-02-21T12:00:10Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.1.0",
+    "instance_id": "a3c7e1b4-9f2d-4a6e-b8c5-1d2e3f4a5b6c"
+  },
+  "window_ids": ["w1"],
+  "windows": {
+    "w1": {
+      "start": "2026-02-21T12:00:00Z",
+      "end": "2026-02-21T12:00:10Z",
+      "label": "10s_window"
+    }
+  },
+  "axes": {
+    "physiological": {
+      "readings": [
+        {
+          "axis": "valence",
+          "score": 0.55,
+          "confidence": 0.72,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        }
+      ]
+    },
+    "context": {
+      "readings": [
+        {
+          "axis": "activity_walk_conf",
+          "score": 0.91,
+          "confidence": 0.88,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        },
+        {
+          "axis": "baseline_ready",
+          "score": 1,
+          "confidence": 1.0,
+          "window_id": "w1"
+        },
+        {
+          "axis": "baseline_maturity",
+          "score": 0.74,
+          "confidence": 0.95,
+          "window_id": "w1",
+          "direction": "higher_is_more"
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "notes": "No PII; context axes contain only numeric qualifiers."
+  },
+  "meta": {
+    "intent": "Valid example: context domain with provenance (RFC-HSI-0006).",
+    "provenance": {
+      "baseline_status": "READY",
+      "inference_mode": "deterministic",
+      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+    }
+  }
+}

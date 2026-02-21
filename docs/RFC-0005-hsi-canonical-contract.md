@@ -6,7 +6,7 @@
 
 ### 1. Motivation
 
-Teams routinely produce “human state” outputs (e.g., affect, engagement, attention proxies) using different inputs and implementations. Without a shared contract, interoperability breaks: consumers couple to vendor-specific formats, time handling becomes inconsistent, and “confidence” semantics drift.
+Teams routinely produce “human state” outputs (e.g., physiological signals, engagement, attention proxies) using different inputs and implementations. Without a shared contract, interoperability breaks: consumers couple to vendor-specific formats, time handling becomes inconsistent, and “confidence” semantics drift.
 
 HSI defines a stable interface so that:
 
@@ -107,15 +107,15 @@ Axes with inherently categorical outputs MUST NOT be represented as axis reading
 
 HSI 1.0 defines the following top-level domains under `axes`:
 
-- `axes.affect.readings[]`
+- `axes.physiological.readings[]`
 - `axes.behavior.readings[]`
 - `axes.engagement.readings[]`
 
 Each domain groups axis readings by semantic family:
 
-- Affect represents internal emotional or physiological state.
+- Physiological represents readings derived from physiological signals (e.g., biosensor data from wearables).
 - Behavior represents observable interaction or activity patterns.
-- Engagement represents integrative or derived involvement states, often computed from affective and behavioral signals.
+- Engagement represents integrative or derived involvement states, often computed from physiological and behavioral signals.
 
 Producers MAY omit axes entirely, or MAY provide only a subset of domains.
 
@@ -125,7 +125,7 @@ Domains MUST NOT be nested, and each axis reading MUST belong to exactly one dom
 
 Producers SHOULD use stable, descriptive names. Recommended examples include:
 
-- Affect: `valence`, `arousal`, `stress`, `calm`
+- Physiological: `valence`, `arousal`, `stress`, `calm`
 - Behavior: `interaction_intensity`, `attention`, `task_persistence`
 - Engagement: `engagement_level`, `engagement_stability`, `absorption`
 
