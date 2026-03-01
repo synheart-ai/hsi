@@ -9,40 +9,21 @@
   "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:04:00Z",
-      "end": "2025-12-28T00:05:00Z",
+      "start_utc": "2025-12-28T00:04:00Z",
+      "end_utc": "2025-12-28T00:05:00Z",
       "label": "60s_window"
     }
   },
-  "source_ids": ["s_sensor_a", "s_sensor_b"],
-  "sources": {
-    "s_sensor_a": {
-      "type": "sensor",
-      "quality": 0.22,
-      "degraded": true,
-      "notes": "Degraded source: low quality."
-    },
-    "s_sensor_b": {
-      "type": "sensor",
-      "quality": 0.49,
-      "degraded": true,
-      "notes": "Degraded source: intermittent availability."
-    }
-  },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "stress",
-          "score": 0.4,
-          "confidence": 0.35,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "evidence_source_ids": ["s_sensor_a", "s_sensor_b"],
-          "notes": "Stress estimated with degraded inputs."
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "stress",
+        "value": 0.4,
+        "confidence": 0.35,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -50,8 +31,6 @@
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Test vector: declared sources are degraded; readings cite degraded sources."
+    "intent": "Test vector: low-confidence reading from degraded inputs."
   }
 }
-
-

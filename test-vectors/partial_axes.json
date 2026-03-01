@@ -9,28 +9,26 @@
   "window_ids": ["w1", "w2"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:06:50Z",
-      "end": "2025-12-28T00:07:00Z",
+      "start_utc": "2025-12-28T00:06:50Z",
+      "end_utc": "2025-12-28T00:07:00Z",
       "label": "10s_window"
     },
     "w2": {
-      "start": "2025-12-28T00:06:00Z",
-      "end": "2025-12-28T00:07:00Z",
+      "start_utc": "2025-12-28T00:06:00Z",
+      "end_utc": "2025-12-28T00:07:00Z",
       "label": "60s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.51,
-          "confidence": 0.57,
-          "window_id": "w2",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "value": 0.51,
+        "confidence": 0.57,
+        "window_ids": ["w2"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -38,8 +36,6 @@
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Test vector: partial axes (physiological only), no embeddings, no sources."
+    "intent": "Test vector: partial axes (physiological only), no embeddings."
   }
 }
-
-

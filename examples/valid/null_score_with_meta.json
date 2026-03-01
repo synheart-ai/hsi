@@ -9,24 +9,21 @@
   "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:09:00Z",
-      "end": "2025-12-28T00:10:00Z",
+      "start_utc": "2025-12-28T00:09:00Z",
+      "end_utc": "2025-12-28T00:10:00Z",
       "label": "60s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "stress",
-          "score": null,
-          "confidence": 0.42,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "notes": "Score is null due to missing authorized sources."
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "stress",
+        "value": null,
+        "confidence": 0.42,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -37,5 +34,3 @@
     "null_reading_reason": "access_control_or_missing_sources"
   }
 }
-
-

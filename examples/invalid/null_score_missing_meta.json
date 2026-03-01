@@ -9,22 +9,20 @@
   "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:11:00Z",
-      "end": "2025-12-28T00:12:00Z"
+      "start_utc": "2025-12-28T00:11:00Z",
+      "end_utc": "2025-12-28T00:12:00Z"
     }
   },
   "axes": {
-    "behavior": {
-      "readings": [
-        {
-          "axis": "attention",
-          "score": null,
-          "confidence": 0.5,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "behavior": [
+      {
+        "name": "attention",
+        "value": null,
+        "confidence": 0.5,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -32,5 +30,3 @@
     "derived_metrics_allowed": true
   }
 }
-
-

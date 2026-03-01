@@ -10,60 +10,57 @@
   "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2026-02-21T12:00:00Z",
-      "end": "2026-02-21T12:00:10Z",
+      "start_utc": "2026-02-21T12:00:00Z",
+      "end_utc": "2026-02-21T12:00:10Z",
       "label": "10s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.55,
-          "confidence": 0.72,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    },
-    "context": {
-      "readings": [
-        {
-          "axis": "activity_walk_conf",
-          "score": 0.91,
-          "confidence": 0.88,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "baseline_ready",
-          "score": 1,
-          "confidence": 1.0,
-          "window_id": "w1"
-        },
-        {
-          "axis": "baseline_maturity",
-          "score": 0.74,
-          "confidence": 0.95,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "value": 0.55,
+        "confidence": 0.72,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ],
+    "context": [
+      {
+        "name": "activity_walk_conf",
+        "value": 0.91,
+        "confidence": 0.88,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      },
+      {
+        "name": "baseline_ready",
+        "value": 1,
+        "confidence": 1,
+        "window_ids": ["w1"]
+      },
+      {
+        "name": "baseline_maturity",
+        "value": 0.74,
+        "confidence": 0.95,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true,
-    "notes": "No PII; context axes contain only numeric qualifiers."
+    "derived_metrics_allowed": true
   },
   "meta": {
     "intent": "Valid example: context domain with provenance (RFC-HSI-0006).",
     "provenance": {
       "baseline_status": "READY",
       "inference_mode": "deterministic",
-      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+      "providers": [
+        { "id": "synheart-focus", "version": "2.1.0" }
+      ]
     }
   }
 }

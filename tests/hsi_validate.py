@@ -12,25 +12,26 @@ from jsonschema import FormatChecker
 
 
 def _parse_rfc3339(dt_str: str) -> datetime:
-    # Python's fromisoformat understands offsets like +00:00, but not trailing 'Z'.
     if dt_str.endswith("Z"):
         dt_str = dt_str[:-1] + "+00:00"
     return datetime.fromisoformat(dt_str)
 
 
 def _iter_axis_readings(payload: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Iterate all axis readings across all domains.
+
+    In the revised 1.1 schema, each domain is a plain array of axis_reading
+    objects (no intermediate ``readings`` wrapper).
+    """
     axes = payload.get("axes")
     if not isinstance(axes, dict):
         return []
 
     readings: list[dict[str, Any]] = []
-    for domain_obj in axes.values():
-        if not isinstance(domain_obj, dict):
+    for domain_arr in axes.values():
+        if not isinstance(domain_arr, list):
             continue
-        domain_readings = domain_obj.get("readings")
-        if not isinstance(domain_readings, list):
-            continue
-        for r in domain_readings:
+        for r in domain_arr:
             if isinstance(r, dict):
                 readings.append(r)
     return readings
@@ -50,7 +51,6 @@ def load_schema_basic(schema_path: Path) -> dict[str, Any]:
 
     def walk(node: Any) -> Any:
         if isinstance(node, dict):
-            # AJV extension: enum: { "$data": "/window_ids" }
             if "enum" in node and isinstance(node["enum"], dict) and "$data" in node["enum"]:
                 node = dict(node)
                 node.pop("enum", None)
@@ -78,13 +78,12 @@ def validate_strict(payload: dict[str, Any]) -> None:
     """
     HSI-VALIDATE-STRICT checks that cannot be fully expressed in pure JSON Schema:
     - windows keys <-> window_ids integrity
-    - sources keys <-> source_ids integrity
     - computed_at_utc >= observed_at_utc
-    - window.end >= window.start (for each declared window)
-    - axis_reading.window_id references a declared window id
-    - embedding.window_id references a declared window id
-    - evidence_source_ids references declared sources (and requires sources to exist)
-    - embedding.dimension equals len(vector) when vector is present
+    - window.end_utc >= window.start_utc (for each declared window)
+    - axis_reading.window_ids entries reference declared window ids
+    - embedding.window_ids entries reference declared window ids
+    - embedding.dims equals len(vector) when vector is present
+    - null value readings require a non-empty top-level meta
     """
     if not isinstance(payload, dict):
         raise StrictValidationError("payload must be an object for strict validation")
@@ -109,71 +108,39 @@ def validate_strict(payload: dict[str, Any]) -> None:
     try:
         observed = _parse_rfc3339(payload["observed_at_utc"])
         computed = _parse_rfc3339(payload["computed_at_utc"])
-    except Exception as e:  # noqa: BLE001 - surfaced as strict error
+    except Exception as e:  # noqa: BLE001
         raise StrictValidationError(f"invalid observed_at_utc/computed_at_utc: {e}") from e
     if computed < observed:
         raise StrictValidationError("computed_at_utc must be >= observed_at_utc")
 
-    # window ordering: end >= start
+    # window ordering: end_utc >= start_utc
     for wid, w in windows.items():
         if not isinstance(w, dict):
             raise StrictValidationError(f"window '{wid}' must be an object")
         try:
-            start = _parse_rfc3339(w["start"])
-            end = _parse_rfc3339(w["end"])
+            start = _parse_rfc3339(w["start_utc"])
+            end = _parse_rfc3339(w["end_utc"])
         except Exception as e:  # noqa: BLE001
             raise StrictValidationError(f"invalid window timestamps for '{wid}': {e}") from e
         if end < start:
-            raise StrictValidationError(f"window '{wid}' end must be >= start")
-
-    # sources integrity (only if present)
-    source_ids = payload.get("source_ids")
-    sources = payload.get("sources")
-    if (source_ids is None) ^ (sources is None):
-        raise StrictValidationError("sources and source_ids must either both be present or both be absent")
-
-    source_id_set: set[str] = set()
-    if sources is not None:
-        if not isinstance(source_ids, list) or not isinstance(sources, dict):
-            raise StrictValidationError("source_ids must be an array and sources must be an object")
-        source_id_set = set(source_ids)
-        sources_key_set = set(sources.keys())
-        if source_id_set != sources_key_set:
-            missing = sorted(source_id_set - sources_key_set)
-            extra = sorted(sources_key_set - source_id_set)
-            raise StrictValidationError(
-                "sources/source_ids mismatch"
-                + (f"; missing sources: {missing}" if missing else "")
-                + (f"; extra sources: {extra}" if extra else "")
-            )
+            raise StrictValidationError(f"window '{wid}' end_utc must be >= start_utc")
 
     # axis readings reference checks
     for r in _iter_axis_readings(payload):
-        # null-score policy (RFC-0005 7.3): if score is null, it must not be interpreted as zero
-        # and MUST be accompanied by an explanation (this repo uses top-level meta as the
-        # contract-compatible place to carry that explanation).
-        if r.get("score") is None:
+        if r.get("value") is None:
             meta = payload.get("meta")
             if not isinstance(meta, dict) or not meta:
                 raise StrictValidationError(
-                    "axis reading with null score requires a non-empty top-level meta explanation"
+                    "axis reading with null value requires a non-empty top-level meta explanation"
                 )
 
-        wid = r.get("window_id")
-        if wid not in window_id_set:
-            raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
+        r_window_ids = r.get("window_ids")
+        if isinstance(r_window_ids, list):
+            for wid in r_window_ids:
+                if wid not in window_id_set:
+                    raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
 
-        evidence = r.get("evidence_source_ids")
-        if evidence is not None:
-            if sources is None:
-                raise StrictValidationError("evidence_source_ids present but sources/source_ids are not declared")
-            if not isinstance(evidence, list):
-                raise StrictValidationError("evidence_source_ids must be an array")
-            for sid in evidence:
-                if sid not in source_id_set:
-                    raise StrictValidationError(f"axis reading references unknown source_id '{sid}'")
-
-    # embeddings reference + dimension checks
+    # embeddings reference + dims checks
     embeddings = payload.get("embeddings")
     if embeddings is not None:
         if not isinstance(embeddings, list):
@@ -181,15 +148,15 @@ def validate_strict(payload: dict[str, Any]) -> None:
         for i, emb in enumerate(embeddings):
             if not isinstance(emb, dict):
                 raise StrictValidationError(f"embeddings[{i}] must be an object")
-            ewid = emb.get("window_id")
-            if ewid not in window_id_set:
-                raise StrictValidationError(f"embedding references unknown window_id '{ewid}'")
+            emb_window_ids = emb.get("window_ids")
+            if isinstance(emb_window_ids, list):
+                for ewid in emb_window_ids:
+                    if ewid not in window_id_set:
+                        raise StrictValidationError(f"embedding references unknown window_id '{ewid}'")
             vec = emb.get("vector")
-            dim = emb.get("dimension")
+            dims = emb.get("dims")
             if vec is not None:
                 if not isinstance(vec, list):
                     raise StrictValidationError("embedding.vector must be an array when present")
-                if isinstance(dim, int) and dim != len(vec):
-                    raise StrictValidationError("embedding.dimension must equal len(embedding.vector)")
-
-
+                if isinstance(dims, int) and dims != len(vec):
+                    raise StrictValidationError("embedding.dims must equal len(embedding.vector)")

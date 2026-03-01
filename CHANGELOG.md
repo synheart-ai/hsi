@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [1.1-revised] - 2026-03-01
+
+### Added
+
+- `affect` axis domain (`axes.affect[]`) alongside existing physiological, engagement, behavior, context
+- `aggregation` field on window objects
+- `inference_mode` and `model_id` fields on axis readings
+- `space` field on embedding objects
+
+### Changed
+
+- Window time fields renamed: `start`/`end` -> `start_utc`/`end_utc`
+- Axis reading fields renamed: `axis` -> `name`, `score` -> `value`, `window_id` -> `window_ids` (now an array)
+- Axes domain flattened from `{ "readings": [...] }` wrapper to plain array
+- Embedding fields renamed: `window_id` -> `window_ids` (now an array), `dimension` -> `dims`
+- Embedding `vector` is now required; `confidence` removed
+- Privacy only requires `contains_pii` (was also requiring `raw_biosignals_allowed`, `derived_metrics_allowed`)
+
+### Removed
+
+- `source_ids`, `sources`, and the `source` definition (source tracking removed from schema)
+- `axis_name` definition (axis names are now plain strings)
+- `evidence_source_ids`, `unit`, `notes` fields from axis readings
+- `embedding_allowed`, `notes` from privacy
+- `allOf` pair-integrity constraint for sources
+
 ## [1.1] - 2026-02-21
 
 ### Added

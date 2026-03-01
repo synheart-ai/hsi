@@ -9,24 +9,21 @@
   "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:05:50Z",
-      "end": "2025-12-28T00:06:00Z",
+      "start_utc": "2025-12-28T00:05:50Z",
+      "end_utc": "2025-12-28T00:06:00Z",
       "label": "10s_window"
     }
   },
   "axes": {
-    "behavior": {
-      "readings": [
-        {
-          "axis": "attention",
-          "score": 0.8,
-          "confidence": 0.08,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "notes": "High score but low confidence: consumer should down-weight."
-        }
-      ]
-    }
+    "behavior": [
+      {
+        "name": "attention",
+        "value": 0.8,
+        "confidence": 0.08,
+        "window_ids": ["w1"],
+        "direction": "higher_is_more"
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -37,5 +34,3 @@
     "intent": "Test vector: low confidence reading."
   }
 }
-
-
