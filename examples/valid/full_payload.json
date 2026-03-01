@@ -12,12 +12,14 @@
     "w1": {
       "start_utc": "2025-12-28T00:01:50Z",
       "end_utc": "2025-12-28T00:02:00Z",
-      "label": "10s_window"
+      "label": "10s_window",
+      "aggregation": "instant"
     },
     "w2": {
       "start_utc": "2025-12-28T00:01:00Z",
       "end_utc": "2025-12-28T00:02:00Z",
-      "label": "60s_window"
+      "label": "60s_window",
+      "aggregation": "windowed"
     }
   },
   "axes": {
@@ -26,15 +28,33 @@
         "name": "stress",
         "value": 0.31,
         "confidence": 0.64,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-stress-v2",
         "window_ids": ["w2"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": ["s_wearable", "s_app"]
       },
       {
         "name": "calm",
         "value": 0.69,
         "confidence": 0.61,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-calm-v2",
         "window_ids": ["w2"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": ["s_wearable"]
+      }
+    ],
+    "engagement": [
+      {
+        "name": "focus",
+        "value": 0.82,
+        "confidence": 0.75,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic",
+        "model_id": "synheart-focus-v3",
+        "window_ids": ["w1"],
+        "evidence_source_ids": ["s_app"]
       }
     ],
     "behavior": [
@@ -42,8 +62,11 @@
         "name": "attention",
         "value": 0.73,
         "confidence": 0.58,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-attention-v1",
         "window_ids": ["w1"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": ["s_app"]
       }
     ],
     "context": [
@@ -51,48 +74,77 @@
         "name": "activity_still_conf",
         "value": 0.85,
         "confidence": 0.92,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-activity-v1",
         "window_ids": ["w1"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": []
       },
       {
         "name": "baseline_ready",
         "value": 1,
         "confidence": 1,
-        "window_ids": ["w2"]
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-baseline-v1",
+        "window_ids": ["w2"],
+        "evidence_source_ids": []
       },
       {
         "name": "baseline_maturity",
         "value": 0.68,
         "confidence": 0.9,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-baseline-v1",
         "window_ids": ["w2"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": []
       }
     ]
   },
   "embeddings": [
     {
       "window_ids": ["w1"],
-      "vector": [0.12, -0.03, 0.44, 0.09],
       "dims": 4,
+      "space": "example-embed-1",
       "encoding": "float32",
-      "space": "example-embed-1"
+      "vector": [0.12, -0.03, 0.44, 0.09],
+      "vector_hash": "sha256:a1b2c3d4e5f6"
     }
   ],
   "privacy": {
     "contains_pii": false,
-    "raw_biosignals_allowed": true,
-    "derived_metrics_allowed": true,
     "consent": "explicit",
-    "purposes": ["research", "personalization"]
+    "purposes": ["research", "personalization"],
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Valid example: physiological + behavior + context + embedding.",
+    "intent": "Valid example: all domains, sources, embedding, full provenance.",
     "provenance": {
+      "source_ids": ["s_wearable", "s_app"],
+      "sources": {
+        "s_wearable": {
+          "type": "sensor",
+          "quality": 0.83,
+          "degraded": false,
+          "notes": "Generic sensor source; no device assumptions."
+        },
+        "s_app": {
+          "type": "app",
+          "quality": 0.74,
+          "degraded": false,
+          "notes": "Application-level behavioral signals."
+        }
+      },
       "baseline_status": "READY",
-      "inference_mode": "deterministic",
       "providers": [
         { "id": "synheart-focus", "version": "2.1.0" }
-      ]
+      ],
+      "equation_id": "eq-stress-calm-v2.1",
+      "merge_rule_id": "merge-default-v1",
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
     }
   }
 }

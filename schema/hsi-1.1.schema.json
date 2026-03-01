@@ -5,7 +5,7 @@
     "type": "object",
     "additionalProperties": false,
 
-    "$comment": "HSI is a contract-only interface. This schema is Draft 2020-12. Some reference-integrity constraints (e.g., windows keys matching window_ids) cannot be fully enforced in pure JSON Schema and MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
+    "$comment": "HSI is a contract-only interface. This schema is Draft 2020-12. Some reference-integrity constraints (e.g., windows keys matching window_ids, evidence_source_ids referencing meta.provenance.source_ids) cannot be fully enforced in pure JSON Schema and MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
 
     "required": [
       "hsi_version",
@@ -60,7 +60,10 @@
 
       "meta": {
         "type": "object",
-        "$comment": "RFC-HSI-0006: meta now permits nested objects (e.g., meta.provenance) in addition to scalar values."
+        "properties": {
+          "provenance": { "$ref": "#/$defs/provenance" }
+        },
+        "$comment": "meta.provenance is the canonical place for source tracking, engine details, equation IDs, baseline status, and provider lists. Other meta keys are unconstrained."
       }
     },
 
@@ -95,7 +98,10 @@
           "start_utc": { "type": "string", "format": "date-time" },
           "end_utc": { "type": "string", "format": "date-time" },
           "label": { "type": "string" },
-          "aggregation": { "type": "string" }
+          "aggregation": {
+            "type": "string",
+            "enum": ["instant", "windowed", "cumulative"]
+          }
         },
         "$comment": "HSI-VALIDATE-STRICT: window.end_utc MUST be >= window.start_utc (out-of-band unless validator supports format comparisons)."
       },
@@ -108,7 +114,7 @@
       "axis_reading": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "value", "confidence", "window_ids"],
+        "required": ["name", "value", "confidence", "direction", "window_ids", "evidence_source_ids"],
         "properties": {
           "name": { "type": "string" },
           "value": {
@@ -117,12 +123,23 @@
           },
           "confidence": { "$ref": "#/$defs/score01" },
           "direction": { "$ref": "#/$defs/direction" },
-          "inference_mode": { "type": "string" },
+          "inference_mode": {
+            "type": "string",
+            "enum": ["deterministic", "probabilistic", "composite"]
+          },
           "model_id": { "type": "string" },
           "window_ids": {
             "type": "array",
             "items": { "$ref": "#/$defs/id" },
             "$comment": "window_ids entries SHOULD reference declared ids in /window_ids. Cross-reference validation enforced out-of-band."
+          },
+          "evidence_source_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id",
+              "$comment": "entries SHOULD reference meta.provenance.source_ids. Cross-reference validation enforced out-of-band."
+            }
           }
         }
       },
@@ -139,9 +156,75 @@
           "physiological": { "$ref": "#/$defs/axes_domain" },
           "engagement": { "$ref": "#/$defs/axes_domain" },
           "behavior": { "$ref": "#/$defs/axes_domain" },
-          "context": { "$ref": "#/$defs/axes_domain" },
-          "affect": { "$ref": "#/$defs/axes_domain" }
+          "context": { "$ref": "#/$defs/axes_domain" }
         }
+      },
+
+      "source": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "quality", "degraded"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "sensor",
+              "app",
+              "self_report",
+              "observer",
+              "derived",
+              "other"
+            ]
+          },
+          "quality": { "$ref": "#/$defs/score01" },
+          "degraded": { "type": "boolean" },
+          "notes": { "type": "string" }
+        }
+      },
+
+      "provenance": {
+        "type": "object",
+        "properties": {
+          "source_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/id" }
+          },
+          "sources": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "$ref": "#/$defs/id" },
+            "additionalProperties": { "$ref": "#/$defs/source" },
+            "$comment": "HSI-VALIDATE-STRICT: sources keys MUST match source_ids."
+          },
+          "baseline_status": { "type": "string" },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "version": { "type": "string" }
+              }
+            }
+          },
+          "equation_id": { "type": "string" },
+          "merge_rule_id": { "type": "string" },
+          "engine": { "type": "string" },
+          "engine_version": { "type": "string" }
+        },
+        "allOf": [
+          {
+            "$comment": "If one of sources/source_ids exists, require the other.",
+            "if": { "required": ["sources"] },
+            "then": { "required": ["source_ids"] }
+          },
+          {
+            "if": { "required": ["source_ids"] },
+            "then": { "required": ["sources"] }
+          }
+        ]
       },
 
       "embedding": {

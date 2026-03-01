@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `affect` axis domain (`axes.affect[]`) alongside existing physiological, engagement, behavior, context
-- `aggregation` field on window objects
-- `inference_mode` and `model_id` fields on axis readings
+- `aggregation` field on window objects, constrained to enum: `instant`, `windowed`, `cumulative`
+- `inference_mode` field on axis readings, constrained to enum: `deterministic`, `probabilistic`, `composite`
+- `model_id` field on axis readings for per-reading model identification
 - `space` field on embedding objects
+- Typed `provenance` sub-schema inside `meta` with `source_ids`, `sources`, `baseline_status`, `inference_mode`, `providers`, `equation_id`, `merge_rule_id`, `engine`, `engine_version`
+- `source_ids`/`sources` pair-integrity `allOf` constraint within `meta.provenance`
 
 ### Changed
 
@@ -24,14 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding fields renamed: `window_id` -> `window_ids` (now an array), `dimension` -> `dims`
 - Embedding `vector` is now required; `confidence` removed
 - Privacy only requires `contains_pii` (was also requiring `raw_biosignals_allowed`, `derived_metrics_allowed`)
+- Source tracking (`source_ids`, `sources`, `source` def) moved from top-level into `meta.provenance`
+- `evidence_source_ids` on axis readings now references `meta.provenance.source_ids` (was top-level `source_ids`)
+- Strict validator checks provenance-based source integrity
 
 ### Removed
 
-- `source_ids`, `sources`, and the `source` definition (source tracking removed from schema)
+- Top-level `source_ids`/`sources` properties (moved to `meta.provenance`)
+- Top-level `allOf` pair-integrity constraint (moved into `$defs/provenance`)
 - `axis_name` definition (axis names are now plain strings)
-- `evidence_source_ids`, `unit`, `notes` fields from axis readings
+- `unit`, `notes` fields from axis readings
 - `embedding_allowed`, `notes` from privacy
-- `allOf` pair-integrity constraint for sources
 
 ## [1.1] - 2026-02-21
 

@@ -4,19 +4,22 @@
   "computed_at_utc": "2025-12-28T00:07:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2d"
   },
   "window_ids": ["w1", "w2"],
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:06:50Z",
       "end_utc": "2025-12-28T00:07:00Z",
-      "label": "10s_window"
+      "label": "10s_window",
+      "aggregation": "instant"
     },
     "w2": {
       "start_utc": "2025-12-28T00:06:00Z",
       "end_utc": "2025-12-28T00:07:00Z",
-      "label": "60s_window"
+      "label": "60s_window",
+      "aggregation": "windowed"
     }
   },
   "axes": {
@@ -25,17 +28,30 @@
         "name": "valence",
         "value": 0.51,
         "confidence": 0.57,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic",
+        "model_id": "synheart-valence-v2",
         "window_ids": ["w2"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": []
       }
     ]
   },
   "privacy": {
     "contains_pii": false,
+    "consent": "implicit",
+    "purposes": ["personalization"],
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Test vector: partial axes (physiological only), no embeddings."
+    "intent": "Test vector: partial axes (physiological only), no embeddings.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [
+        { "id": "synheart-physio", "version": "2.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }

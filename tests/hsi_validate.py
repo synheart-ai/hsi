@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -20,8 +19,7 @@ def _parse_rfc3339(dt_str: str) -> datetime:
 def _iter_axis_readings(payload: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """Iterate all axis readings across all domains.
 
-    In the revised 1.1 schema, each domain is a plain array of axis_reading
-    objects (no intermediate ``readings`` wrapper).
+    Each domain is a plain array of axis_reading objects.
     """
     axes = payload.get("axes")
     if not isinstance(axes, dict):
@@ -62,12 +60,10 @@ def load_schema_basic(schema_path: Path) -> dict[str, Any]:
     return walk(copy.deepcopy(schema))
 
 
-@dataclass(frozen=True)
 class StrictValidationError(Exception):
-    message: str
-
-    def __str__(self) -> str:
-        return self.message
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
 
 
 def validate_basic(payload: Any, schema_basic: dict[str, Any]) -> None:
@@ -80,7 +76,9 @@ def validate_strict(payload: dict[str, Any]) -> None:
     - windows keys <-> window_ids integrity
     - computed_at_utc >= observed_at_utc
     - window.end_utc >= window.start_utc (for each declared window)
+    - meta.provenance.sources keys <-> meta.provenance.source_ids integrity
     - axis_reading.window_ids entries reference declared window ids
+    - axis_reading.evidence_source_ids entries reference meta.provenance.source_ids
     - embedding.window_ids entries reference declared window ids
     - embedding.dims equals len(vector) when vector is present
     - null value readings require a non-empty top-level meta
@@ -125,10 +123,39 @@ def validate_strict(payload: dict[str, Any]) -> None:
         if end < start:
             raise StrictValidationError(f"window '{wid}' end_utc must be >= start_utc")
 
+    # provenance source integrity (within meta.provenance, if present)
+    meta = payload.get("meta")
+    provenance = meta.get("provenance") if isinstance(meta, dict) else None
+
+    source_id_set: set[str] = set()
+    if isinstance(provenance, dict):
+        prov_source_ids = provenance.get("source_ids")
+        prov_sources = provenance.get("sources")
+
+        if (prov_source_ids is None) ^ (prov_sources is None):
+            raise StrictValidationError(
+                "meta.provenance.sources and meta.provenance.source_ids must either both be present or both be absent"
+            )
+
+        if prov_sources is not None:
+            if not isinstance(prov_source_ids, list) or not isinstance(prov_sources, dict):
+                raise StrictValidationError(
+                    "meta.provenance.source_ids must be an array and meta.provenance.sources must be an object"
+                )
+            source_id_set = set(prov_source_ids)
+            sources_key_set = set(prov_sources.keys())
+            if source_id_set != sources_key_set:
+                missing = sorted(source_id_set - sources_key_set)
+                extra = sorted(sources_key_set - source_id_set)
+                raise StrictValidationError(
+                    "meta.provenance sources/source_ids mismatch"
+                    + (f"; missing sources: {missing}" if missing else "")
+                    + (f"; extra sources: {extra}" if extra else "")
+                )
+
     # axis readings reference checks
     for r in _iter_axis_readings(payload):
         if r.get("value") is None:
-            meta = payload.get("meta")
             if not isinstance(meta, dict) or not meta:
                 raise StrictValidationError(
                     "axis reading with null value requires a non-empty top-level meta explanation"
@@ -139,6 +166,20 @@ def validate_strict(payload: dict[str, Any]) -> None:
             for wid in r_window_ids:
                 if wid not in window_id_set:
                     raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
+
+        evidence = r.get("evidence_source_ids")
+        if evidence is not None and len(evidence) > 0:
+            if not source_id_set:
+                raise StrictValidationError(
+                    "evidence_source_ids present but meta.provenance.source_ids is not declared"
+                )
+            if not isinstance(evidence, list):
+                raise StrictValidationError("evidence_source_ids must be an array")
+            for sid in evidence:
+                if sid not in source_id_set:
+                    raise StrictValidationError(
+                        f"axis reading references unknown source_id '{sid}' (not in meta.provenance.source_ids)"
+                    )
 
     # embeddings reference + dims checks
     embeddings = payload.get("embeddings")

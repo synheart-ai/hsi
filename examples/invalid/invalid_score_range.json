@@ -4,13 +4,16 @@
   "computed_at_utc": "2025-12-28T00:04:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "f1e2d3c4-b5a6-9788-7654-321fedcba098"
   },
   "window_ids": ["w1"],
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:03:50Z",
-      "end_utc": "2025-12-28T00:04:00Z"
+      "end_utc": "2025-12-28T00:04:00Z",
+      "label": "10s_window",
+      "aggregation": "instant"
     }
   },
   "axes": {
@@ -19,17 +22,30 @@
         "name": "engagement",
         "value": 0.9,
         "confidence": 1.2,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-engagement-v1",
         "window_ids": ["w1"],
-        "direction": "higher_is_more"
+        "evidence_source_ids": []
       }
     ]
   },
   "privacy": {
     "contains_pii": false,
+    "consent": "implicit",
+    "purposes": ["research"],
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Invalid example: confidence is outside the [0,1] range."
+    "intent": "Invalid example: confidence is outside the [0,1] range.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [
+        { "id": "synheart-behavior", "version": "1.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }
