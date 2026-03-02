@@ -7,7 +7,6 @@
     "version": "1.0.0",
     "instance_id": "b1c2d3e4-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:00:50Z",
@@ -42,10 +41,13 @@
   },
   "privacy": {
     "contains_pii": false,
-    "consent": "implicit",
-    "purposes": ["personalization"],
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["personalization"]
   },
   "meta": {
     "intent": "Valid example: behavior domain only.",

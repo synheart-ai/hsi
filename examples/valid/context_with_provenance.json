@@ -7,7 +7,6 @@
     "version": "1.1.0",
     "instance_id": "a3c7e1b4-9f2d-4a6e-b8c5-1d2e3f4a5b6c"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
       "start_utc": "2026-02-21T12:00:00Z",
@@ -64,10 +63,13 @@
   },
   "privacy": {
     "contains_pii": false,
-    "consent": "implicit",
-    "purposes": ["personalization"],
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["personalization"]
   },
   "meta": {
     "intent": "Valid example: context domain with full provenance.",

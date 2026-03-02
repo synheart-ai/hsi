@@ -7,7 +7,6 @@
     "version": "1.0.0",
     "instance_id": "e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0b"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:04:00Z",
@@ -32,15 +31,17 @@
   },
   "privacy": {
     "contains_pii": false,
-    "consent": "implicit",
-    "purposes": ["research"],
-    "raw_biosignals_allowed": true,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": true,
+      "derived_metrics": true
+    },
+    "purposes": ["research"]
   },
   "meta": {
     "intent": "Test vector: declared sources are degraded; readings cite degraded sources.",
     "provenance": {
-      "source_ids": ["s_sensor_a", "s_sensor_b"],
       "sources": {
         "s_sensor_a": {
           "type": "sensor",

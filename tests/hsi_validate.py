@@ -73,34 +73,22 @@ def validate_basic(payload: Any, schema_basic: dict[str, Any]) -> None:
 def validate_strict(payload: dict[str, Any]) -> None:
     """
     HSI-VALIDATE-STRICT checks that cannot be fully expressed in pure JSON Schema:
-    - windows keys <-> window_ids integrity
     - computed_at_utc >= observed_at_utc
     - window.end_utc >= window.start_utc (for each declared window)
-    - meta.provenance.sources keys <-> meta.provenance.source_ids integrity
-    - axis_reading.window_ids entries reference declared window ids
-    - axis_reading.evidence_source_ids entries reference meta.provenance.source_ids
-    - embedding.window_ids entries reference declared window ids
+    - axis_reading.window_ids entries reference keys in /windows
+    - axis_reading.evidence_source_ids entries reference keys in meta.provenance.sources
+    - embedding.window_ids entries reference keys in /windows
     - embedding.dims equals len(vector) when vector is present
     - null value readings require a non-empty top-level meta
     """
     if not isinstance(payload, dict):
         raise StrictValidationError("payload must be an object for strict validation")
 
-    window_ids = payload.get("window_ids")
     windows = payload.get("windows")
-    if not isinstance(window_ids, list) or not isinstance(windows, dict):
-        raise StrictValidationError("window_ids and windows must be present for strict validation")
+    if not isinstance(windows, dict):
+        raise StrictValidationError("windows must be present for strict validation")
 
-    window_id_set = set(window_ids)
-    windows_key_set = set(windows.keys())
-    if window_id_set != windows_key_set:
-        missing = sorted(window_id_set - windows_key_set)
-        extra = sorted(windows_key_set - window_id_set)
-        raise StrictValidationError(
-            "windows/window_ids mismatch"
-            + (f"; missing windows: {missing}" if missing else "")
-            + (f"; extra windows: {extra}" if extra else "")
-        )
+    window_id_set = set(windows.keys())
 
     # time ordering: computed_at_utc >= observed_at_utc
     try:
@@ -123,35 +111,15 @@ def validate_strict(payload: dict[str, Any]) -> None:
         if end < start:
             raise StrictValidationError(f"window '{wid}' end_utc must be >= start_utc")
 
-    # provenance source integrity (within meta.provenance, if present)
+    # source ID set from provenance.sources map keys (if present)
     meta = payload.get("meta")
     provenance = meta.get("provenance") if isinstance(meta, dict) else None
 
     source_id_set: set[str] = set()
     if isinstance(provenance, dict):
-        prov_source_ids = provenance.get("source_ids")
         prov_sources = provenance.get("sources")
-
-        if (prov_source_ids is None) ^ (prov_sources is None):
-            raise StrictValidationError(
-                "meta.provenance.sources and meta.provenance.source_ids must either both be present or both be absent"
-            )
-
-        if prov_sources is not None:
-            if not isinstance(prov_source_ids, list) or not isinstance(prov_sources, dict):
-                raise StrictValidationError(
-                    "meta.provenance.source_ids must be an array and meta.provenance.sources must be an object"
-                )
-            source_id_set = set(prov_source_ids)
-            sources_key_set = set(prov_sources.keys())
-            if source_id_set != sources_key_set:
-                missing = sorted(source_id_set - sources_key_set)
-                extra = sorted(sources_key_set - source_id_set)
-                raise StrictValidationError(
-                    "meta.provenance sources/source_ids mismatch"
-                    + (f"; missing sources: {missing}" if missing else "")
-                    + (f"; extra sources: {extra}" if extra else "")
-                )
+        if isinstance(prov_sources, dict):
+            source_id_set = set(prov_sources.keys())
 
     # axis readings reference checks
     for r in _iter_axis_readings(payload):
@@ -171,14 +139,14 @@ def validate_strict(payload: dict[str, Any]) -> None:
         if evidence is not None and len(evidence) > 0:
             if not source_id_set:
                 raise StrictValidationError(
-                    "evidence_source_ids present but meta.provenance.source_ids is not declared"
+                    "evidence_source_ids present but meta.provenance.sources is not declared"
                 )
             if not isinstance(evidence, list):
                 raise StrictValidationError("evidence_source_ids must be an array")
             for sid in evidence:
                 if sid not in source_id_set:
                     raise StrictValidationError(
-                        f"axis reading references unknown source_id '{sid}' (not in meta.provenance.source_ids)"
+                        f"axis reading references unknown source_id '{sid}' (not in meta.provenance.sources)"
                     )
 
     # embeddings reference + dims checks

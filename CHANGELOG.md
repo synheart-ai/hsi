@@ -15,8 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `inference_mode` field on axis readings, constrained to enum: `deterministic`, `probabilistic`, `composite`
 - `model_id` field on axis readings for per-reading model identification
 - `space` field on embedding objects
-- Typed `provenance` sub-schema inside `meta` with `source_ids`, `sources`, `baseline_status`, `inference_mode`, `providers`, `equation_id`, `merge_rule_id`, `engine`, `engine_version`
-- `source_ids`/`sources` pair-integrity `allOf` constraint within `meta.provenance`
+- Typed `provenance` sub-schema inside `meta` with `sources` (ID-keyed map), `baseline_status`, `providers`, `equation_id`, `merge_rule_id`, `engine`, `engine_version`
+- `$defs/consent` object with `level` (enum), `embedding`, `raw_biosignals`, `derived_metrics` (booleans)
 
 ### Changed
 
@@ -26,17 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Embedding fields renamed: `window_id` -> `window_ids` (now an array), `dimension` -> `dims`
 - Embedding `vector` is now required; `confidence` removed
 - Privacy only requires `contains_pii` (was also requiring `raw_biosignals_allowed`, `derived_metrics_allowed`)
-- Source tracking (`source_ids`, `sources`, `source` def) moved from top-level into `meta.provenance`
-- `evidence_source_ids` on axis readings now references `meta.provenance.source_ids` (was top-level `source_ids`)
-- Strict validator checks provenance-based source integrity
+- Source tracking (`sources` map, `source` def) moved from top-level into `meta.provenance`; map keys are the authoritative source IDs
+- `evidence_source_ids` on axis readings now references keys in `meta.provenance.sources`
+- `consent` restructured from enum string to object (`$defs/consent`) with `level`, `embedding`, `raw_biosignals`, `derived_metrics`
+- `raw_biosignals_allowed` and `derived_metrics_allowed` moved from privacy into `consent` (renamed to `raw_biosignals` / `derived_metrics`)
+- Strict validator builds window/source ID sets directly from map keys
 
 ### Removed
 
+- Top-level `window_ids` array (windows map keys are the authoritative ID set)
 - Top-level `source_ids`/`sources` properties (moved to `meta.provenance`)
-- Top-level `allOf` pair-integrity constraint (moved into `$defs/provenance`)
+- `source_ids` from provenance (sources map keys are the authoritative ID set)
+- `allOf` pair-integrity constraints (both top-level and provenance)
+- `inference_mode` from provenance (handled per axis_reading)
 - `axis_name` definition (axis names are now plain strings)
 - `unit`, `notes` fields from axis readings
 - `embedding_allowed`, `notes` from privacy
+- `raw_biosignals_allowed`, `derived_metrics_allowed` from privacy (moved into consent object)
 
 ## [1.1] - 2026-02-21
 
