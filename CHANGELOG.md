@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.1-revised] - 2026-03-01
+## [1.1] - 2026-03-01
 
 ### Added
 
@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `space` field on embedding objects
 - Typed `provenance` sub-schema inside `meta` with `sources` (ID-keyed map), `baseline_status`, `providers`, `equation_id`, `merge_rule_id`, `engine`, `engine_version`
 - `$defs/consent` object with `level` (enum), `embedding`, `raw_biosignals`, `derived_metrics` (booleans)
+- Context axis domain (`axes.context.readings[]`) for numeric runtime-condition qualifiers (RFC-HSI-0006)
+- Provenance guidance: producers place inference/baseline provenance in `meta.provenance` (RFC-HSI-0006)
+- `meta` field now permits nested objects and arrays (required for provenance)
+- New valid example: `examples/valid/context_with_provenance.json`
 
 ### Changed
 
@@ -31,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `consent` restructured from enum string to object (`$defs/consent`) with `level`, `embedding`, `raw_biosignals`, `derived_metrics`
 - `raw_biosignals_allowed` and `derived_metrics_allowed` moved from privacy into `consent` (renamed to `raw_biosignals` / `derived_metrics`)
 - Strict validator builds window/source ID sets directly from map keys
+- Renamed axes domain `affect` to `physiological` for semantic neutrality and wearable data inclusivity
+- Renamed example file: `affect_only.json` -> `physiological_only.json`
+- Schema file: `schema/hsi-1.1.schema.json` (replaces `hsi-1.0.schema.json` as canonical)
+- All examples and test vectors updated to `hsi_version: "1.1"`
+- RFC-HSI-0006 status changed from Draft to Accepted
 
 ### Removed
 
@@ -43,23 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `unit`, `notes` fields from axis readings
 - `embedding_allowed`, `notes` from privacy
 - `raw_biosignals_allowed`, `derived_metrics_allowed` from privacy (moved into consent object)
-
-## [1.1] - 2026-02-21
-
-### Added
-
-- Context axis domain (`axes.context.readings[]`) for numeric runtime-condition qualifiers (RFC-HSI-0006)
-- Provenance guidance: producers place inference/baseline provenance in `meta.provenance` (RFC-HSI-0006)
-- `meta` field now permits nested objects and arrays (required for provenance)
-- New valid example: `examples/valid/context_with_provenance.json`
-
-### Changed
-
-- Renamed axes domain `affect` to `physiological` for semantic neutrality and wearable data inclusivity
-- Renamed example file: `affect_only.json` -> `physiological_only.json`
-- Schema file: `schema/hsi-1.1.schema.json` (replaces `hsi-1.0.schema.json` as canonical)
-- All examples and test vectors updated to `hsi_version: "1.1"`
-- RFC-HSI-0006 status changed from Draft to Accepted
 
 ## [1.0] - 2026-01-01
 

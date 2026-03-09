@@ -1,7 +1,7 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/synheart-ai/hsi/main/schema/hsi-1.1.schema.json",
-    "title": "Human State Interface (HSI) 1.1 - Revised",
+    "title": "Human State Interface (HSI) 1.1",
     "type": "object",
     "additionalProperties": false,
 
