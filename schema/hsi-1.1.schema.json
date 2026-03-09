@@ -111,7 +111,7 @@
           "name": { "type": "string" },
           "value": {
             "type": ["number", "null"],
-            "$comment": "value MAY be null when a producer cannot compute a reading due to access-control, missing sources, or other constraints. Consumers MUST NOT interpret null as zero; explanation should be provided in meta."
+            "$comment": "value MAY be null when a producer cannot compute a reading due to access-control, missing sources, or other constraints. Consumers MUST NOT interpret null as zero; explanation should be provided in meta. Numeric value is intentionally not constrained to [0,1] because some context metrics may use domain-specific scales; consumers should interpret the value by axis name and producer contract rather than assuming normalization."
           },
           "confidence": { "$ref": "#/$defs/score01" },
           "direction": { "$ref": "#/$defs/direction" },
@@ -122,15 +122,17 @@
           "model_id": { "type": "string" },
           "window_ids": {
             "type": "array",
+            "uniqueItems": true,
             "items": { "$ref": "#/$defs/id" },
             "$comment": "entries SHOULD reference keys in /windows. Cross-reference validation enforced out-of-band."
           },
           "evidence_source_ids": {
             "type": "array",
             "uniqueItems": true,
+            "$comment": "Empty array is valid and means this reading does not declare evidence links. Non-empty entries SHOULD reference keys in meta.provenance.sources. Cross-reference validation enforced out-of-band.",
             "items": {
               "$ref": "#/$defs/id",
-              "$comment": "entries SHOULD reference keys in meta.provenance.sources. Cross-reference validation enforced out-of-band."
+              "$comment": "entries SHOULD reference keys in meta.provenance.sources."
             }
           }
         }
@@ -176,6 +178,7 @@
 
       "provenance": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "sources": {
             "type": "object",
@@ -209,6 +212,7 @@
         "properties": {
           "window_ids": {
             "type": "array",
+            "uniqueItems": true,
             "items": { "$ref": "#/$defs/id" },
             "$comment": "entries SHOULD reference keys in /windows. Cross-reference validation enforced out-of-band."
           },

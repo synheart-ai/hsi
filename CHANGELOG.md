@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `space` field on embedding objects
 - Typed `provenance` sub-schema inside `meta` with `sources` (ID-keyed map), `baseline_status`, `providers`, `equation_id`, `merge_rule_id`, `engine`, `engine_version`
 - `$defs/consent` object with `level` (enum), `embedding`, `raw_biosignals`, `derived_metrics` (booleans)
-- Context axis domain (`axes.context.readings[]`) for numeric runtime-condition qualifiers (RFC-HSI-0006)
+- Context axis domain (`axes.context[]`) for numeric runtime-condition qualifiers (RFC-HSI-0006)
 - Provenance guidance: producers place inference/baseline provenance in `meta.provenance` (RFC-HSI-0006)
 - `meta` field now permits nested objects and arrays (required for provenance)
 - New valid example: `examples/valid/context_with_provenance.json`
