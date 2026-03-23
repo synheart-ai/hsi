@@ -7,63 +7,80 @@
     "version": "1.1.0",
     "instance_id": "a3c7e1b4-9f2d-4a6e-b8c5-1d2e3f4a5b6c"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2026-02-21T12:00:00Z",
-      "end": "2026-02-21T12:00:10Z",
-      "label": "10s_window"
+      "start_utc": "2026-02-21T12:00:00Z",
+      "end_utc": "2026-02-21T12:00:10Z",
+      "label": "10s_window",
+      "aggregation": "instant"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.55,
-          "confidence": 0.72,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    },
-    "context": {
-      "readings": [
-        {
-          "axis": "activity_walk_conf",
-          "score": 0.91,
-          "confidence": 0.88,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "baseline_ready",
-          "score": 1,
-          "confidence": 1.0,
-          "window_id": "w1"
-        },
-        {
-          "axis": "baseline_maturity",
-          "score": 0.74,
-          "confidence": 0.95,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "value": 0.55,
+        "confidence": 0.72,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-valence-v2",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ],
+    "context": [
+      {
+        "name": "activity_walk_conf",
+        "value": 0.91,
+        "confidence": 0.88,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-activity-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "baseline_ready",
+        "value": 1,
+        "confidence": 1,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-baseline-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "baseline_maturity",
+        "value": 0.74,
+        "confidence": 0.95,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-baseline-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true,
-    "notes": "No PII; context axes contain only numeric qualifiers."
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["personalization"]
   },
   "meta": {
-    "intent": "Valid example: context domain with provenance (RFC-HSI-0006).",
+    "intent": "Valid example: context domain with full provenance.",
     "provenance": {
       "baseline_status": "READY",
-      "inference_mode": "deterministic",
-      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+      "providers": [
+        { "id": "synheart-focus", "version": "2.1.0" }
+      ],
+      "equation_id": "eq-context-v1.0",
+      "engine": "synheart-flux",
+      "engine_version": "1.1.0"
     }
   }
 }

@@ -4,38 +4,50 @@
   "computed_at_utc": "2025-12-28T00:10:01Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "c4d5e6f7-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:09:00Z",
-      "end": "2025-12-28T00:10:00Z",
-      "label": "60s_window"
+      "start_utc": "2025-12-28T00:09:00Z",
+      "end_utc": "2025-12-28T00:10:00Z",
+      "label": "60s_window",
+      "aggregation": "windowed"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "stress",
-          "score": null,
-          "confidence": 0.42,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "notes": "Score is null due to missing authorized sources."
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "stress",
+        "value": null,
+        "confidence": 0.42,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-stress-v2",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["research"]
   },
   "meta": {
-    "null_reading_reason": "access_control_or_missing_sources"
+    "null_reading_reason": "access_control_or_missing_sources",
+    "provenance": {
+      "baseline_status": "WARMING",
+      "providers": [
+        { "id": "synheart-stress", "version": "2.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }
-
-
