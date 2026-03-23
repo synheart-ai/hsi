@@ -4,43 +4,60 @@
   "computed_at_utc": "2025-12-28T00:01:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "b1c2d3e4-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:00:50Z",
-      "end": "2025-12-28T00:01:00Z"
+      "start_utc": "2025-12-28T00:00:50Z",
+      "end_utc": "2025-12-28T00:01:00Z",
+      "label": "10s_window",
+      "aggregation": "instant"
     }
   },
   "axes": {
-    "behavior": {
-      "readings": [
-        {
-          "axis": "engagement",
-          "score": 0.77,
-          "confidence": 0.63,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "task_persistence",
-          "score": 0.58,
-          "confidence": 0.55,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "behavior": [
+      {
+        "name": "engagement",
+        "value": 0.77,
+        "confidence": 0.63,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-engagement-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "task_persistence",
+        "value": 0.58,
+        "confidence": 0.55,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-persistence-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["personalization"]
   },
   "meta": {
-    "intent": "Valid example: behavior domain only."
+    "intent": "Valid example: behavior domain only.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [
+        { "id": "synheart-behavior", "version": "1.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }
-
-

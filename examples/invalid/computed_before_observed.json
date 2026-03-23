@@ -1,30 +1,30 @@
 {
   "hsi_version": "1.1",
-  "observed_at_utc": "2025-12-28T00:03:00Z",
-  "computed_at_utc": "2025-12-28T00:03:00Z",
+  "observed_at_utc": "2025-12-28T00:05:00Z",
+  "computed_at_utc": "2025-12-28T00:04:59Z",
   "producer": {
     "name": "Example Producer",
     "version": "1.0.0",
-    "instance_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    "instance_id": "1f13f289-cd10-402a-9f51-8d5a9f3a7dc6"
   },
   "windows": {
     "w1": {
-      "start_utc": "2025-12-28T00:02:50Z",
-      "end_utc": "2025-12-28T00:03:00Z",
+      "start_utc": "2025-12-28T00:04:50Z",
+      "end_utc": "2025-12-28T00:05:00Z",
       "label": "10s_window",
       "aggregation": "instant"
     }
   },
   "axes": {
-    "physiological": [
+    "engagement": [
       {
-        "name": "valence",
-        "value": 0.6,
-        "confidence": 0.6,
+        "name": "focus",
+        "value": 0.82,
+        "confidence": 0.75,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-valence-v2",
-        "window_ids": ["w_missing"],
+        "inference_mode": "probabilistic",
+        "model_id": "synheart-focus-v3",
+        "window_ids": ["w1"],
         "evidence_source_ids": []
       }
     ]
@@ -40,11 +40,11 @@
     "purposes": ["research"]
   },
   "meta": {
-    "intent": "Invalid example: window_ids references a missing window.",
+    "intent": "Invalid example: computed_at_utc is before observed_at_utc.",
     "provenance": {
       "baseline_status": "READY",
       "providers": [
-        { "id": "synheart-physio", "version": "2.0.0" }
+        { "id": "synheart-focus", "version": "2.1.0" }
       ],
       "engine": "synheart-flux",
       "engine_version": "1.0.0"

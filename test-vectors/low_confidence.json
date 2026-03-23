@@ -4,38 +4,50 @@
   "computed_at_utc": "2025-12-28T00:06:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "f6a7b8c9-d0e1-2f3a-4b5c-6d7e8f9a0b1c"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:05:50Z",
-      "end": "2025-12-28T00:06:00Z",
-      "label": "10s_window"
+      "start_utc": "2025-12-28T00:05:50Z",
+      "end_utc": "2025-12-28T00:06:00Z",
+      "label": "10s_window",
+      "aggregation": "instant"
     }
   },
   "axes": {
-    "behavior": {
-      "readings": [
-        {
-          "axis": "attention",
-          "score": 0.8,
-          "confidence": 0.08,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "notes": "High score but low confidence: consumer should down-weight."
-        }
-      ]
-    }
+    "behavior": [
+      {
+        "name": "attention",
+        "value": 0.8,
+        "confidence": 0.08,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic",
+        "model_id": "synheart-attention-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
-    "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "consent": {
+      "level": "implicit",
+      "embedding": false,
+      "raw_biosignals": false,
+      "derived_metrics": true
+    },
+    "purposes": ["research"]
   },
   "meta": {
-    "intent": "Test vector: low confidence reading."
+    "intent": "Test vector: low confidence reading.",
+    "provenance": {
+      "baseline_status": "WARMING",
+      "providers": [
+        { "id": "synheart-behavior", "version": "1.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }
-
-
