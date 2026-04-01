@@ -10,6 +10,15 @@ from typing import Any, Iterable
 from jsonschema import Draft202012Validator
 from jsonschema import FormatChecker
 
+_INFERENCE_MODES = frozenset(
+    {
+        "probabilistic_model",
+        "deterministic_rule",
+        "external_provider",
+        "composite",
+    }
+)
+
 
 def _parse_rfc3339(dt_str: str) -> datetime:
     # Python's fromisoformat understands offsets like +00:00, but not trailing 'Z'.
@@ -152,19 +161,45 @@ def validate_strict(payload: dict[str, Any]) -> None:
         # null-score policy (RFC-0005 7.3): if score is null, it must not be interpreted as zero
         # and MUST be accompanied by an explanation (this repo uses top-level meta as the
         # contract-compatible place to carry that explanation).
-        if r.get("score") is None:
+        if r.get("score") is None and "axis" in r:
             meta = payload.get("meta")
             if not isinstance(meta, dict) or not meta:
                 raise StrictValidationError(
                     "axis reading with null score requires a non-empty top-level meta explanation"
                 )
 
-        wid = r.get("window_id")
-        if wid not in window_id_set:
-            raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
+        wids = r.get("window_ids")
+        if isinstance(wids, list):
+            for wid in wids:
+                if wid not in window_id_set:
+                    raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
+        else:
+            wid = r.get("window_id")
+            if wid is not None and wid not in window_id_set:
+                raise StrictValidationError(f"axis reading references unknown window_id '{wid}'")
+
+        if payload.get("hsi_version") == "1.2":
+            imode = r.get("inference_mode")
+            if imode is not None and imode not in _INFERENCE_MODES:
+                raise StrictValidationError(
+                    f"axis reading has invalid inference_mode '{imode}'; expected one of {sorted(_INFERENCE_MODES)}"
+                )
+
+            val = r.get("value")
+            if isinstance(val, dict):
+                for _cls, p in val.items():
+                    if not isinstance(p, (int, float)):
+                        raise StrictValidationError(
+                            "emotion-style value entries must be numbers in [0, 1]"
+                        )
+                    pf = float(p)
+                    if not 0.0 <= pf <= 1.0:
+                        raise StrictValidationError(
+                            f"emotion-style value entry '{_cls}' must be in [0, 1], got {pf}"
+                        )
 
         evidence = r.get("evidence_source_ids")
-        if evidence is not None:
+        if evidence:
             if sources is None:
                 raise StrictValidationError("evidence_source_ids present but sources/source_ids are not declared")
             if not isinstance(evidence, list):

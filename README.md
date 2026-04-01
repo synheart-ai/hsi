@@ -67,6 +67,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 - **Authoritative RFC**: `docs/RFC-0005-hsi-canonical-contract.md`
 - **Validation schema (HSI 1.1)**: `schema/hsi-1.1.schema.json`
+- **Validation schema (HSI 1.2)**: `schema/hsi-1.2.schema.json` — emotion head + `inference_mode` vocabulary ([RFC-HSI-0007](docs/RFC-HSI-0007.md))
 - **Versioning policy**: `versioning.md`
 - **Security and privacy**: `SECURITY.md`
 - **Examples**: `examples/`
