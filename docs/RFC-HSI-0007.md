@@ -2,10 +2,12 @@
 
 ## HSI 1.2 — Emotion head and inference vocabulary
 
-- **Status**: Draft
+- **Status**: Superseded by [RFC-HSI-0008](./RFC-HSI-0008.md)
 - **Type**: Minor version (additive on 1.1)
 - **Target**: HSI 1.2
 - **Owner**: HSI Maintainers
+
+> **Note:** This document introduced the `axes.emotion` domain and the refined `inference_mode` vocabulary for HSI 1.2. Both are now defined normatively by **[RFC-HSI-0008](./RFC-HSI-0008.md)**, the canonical 1.2 contract. The text below is retained as the historical motivation.
 
 ## 1. Purpose
 
@@ -14,8 +16,10 @@ HSI 1.2 adds optional **`axes.emotion`** and a normative **`inference_mode`** vo
 ## 2. Schema
 
 - **`hsi_version`**: MUST be `"1.2"` for payloads claiming this contract.
-- **`axes.emotion.readings[]`**: optional domain; each item is an **emotion reading** with `name` equal to `"emotion"`, `value` an object mapping `lower_snake_case` class labels to masses in `[0, 1]`, plus `confidence`, `direction`, `window_ids`, `evidence_source_ids`, `inference_mode`, and `model_id`. Producers SHOULD normalize class masses to sum to `1.0` when they represent a full distribution.
-- **Legacy axis readings** (`axes.*.readings[]` except emotion): optional `inference_mode` and `model_id` on the same objects as in HSI 1.1 (`axis`, `score`, `window_id`, …).
+- **Axes shape (breaking vs 1.1)**: Every domain under `axes` is an **array of axis readings** (not an object wrapping a `readings[]` array). This applies uniformly to `physiological`, `behavior`, `engagement`, `context`, and `emotion`.
+- **Axis reading fields**: Each reading is an object with required `name`, `score` (number in `[0, 1]` or `null`), `confidence`, `direction`, `window_ids`, `evidence_source_ids`, `inference_mode`, and `model_id`. Optional: `notes`. The legacy `axis` field is removed — use `name`.
+- **`axes.emotion`**: optional domain using the same `axis_reading` shape as the other domains. Each class is expressed as its **own reading**, with `name` set to a `lower_snake_case` label (e.g. `"emotion.stress"`, `"emotion.calm"`) and a scalar `score` in `[0, 1]`. This keeps emotion composable with the rest of the contract and with tooling that iterates readings uniformly; producers that need a normalized distribution SHOULD emit one reading per class whose scores sum to `1.0`.
+- **Sum-to-1.0 is NOT validator-enforced.** Partial emission is allowed (e.g. a producer may emit only `emotion.stress` without the full class set), so validators cannot distinguish a partial from a full distribution from payload shape alone. Producers that want to advertise a full distribution SHOULD emit every class they model in the same payload; consumers that require a normalized distribution SHOULD verify the sum themselves or require a producer-level contract.
 
 ## 3. `inference_mode` enum
 
@@ -28,4 +32,4 @@ The same strings MAY appear under `meta.provenance.inference_mode` for coarse pr
 
 ## 4. Migration
 
-Existing **HSI 1.1** documents remain valid under `hsi-1.1.schema.json`. New producers that emit the emotion head or per-reading inference metadata SHOULD use **1.2** and `hsi-1.2.schema.json`.
+New producers SHOULD emit **HSI 1.2** against `hsi-1.2.schema.json`. Existing **HSI 1.1** payloads remain valid under `hsi-1.1.schema.json`.

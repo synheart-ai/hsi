@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-1.2-blue.svg)](schema/hsi-1.2.schema.json)
 [![Schema](https://img.shields.io/badge/schema-JSON%20Draft%202020--12-green.svg)](https://json-schema.org/draft/2020-12/schema)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![RFC](https://img.shields.io/badge/RFC-0005-purple.svg)](docs/RFC-0005-hsi-canonical-contract.md)
+[![RFC](https://img.shields.io/badge/RFC-HSI--0008-purple.svg)](docs/RFC-HSI-0008.md)
 [![Specification](https://img.shields.io/badge/specification-contract--only-orange.svg)](#what-hsi-is)
 [![Whitepaper](https://img.shields.io/badge/whitepaper-read-brightgreen.svg)](docs/hsi-contract-whitepaper.pdf)
 
@@ -65,9 +65,12 @@ for human-state outputs — independent of devices, models, or vendors.
 >Consumers MUST treat unknown fields as forward-compatible extensions
 ### Specification entry points
 
-- **Authoritative RFC**: `docs/RFC-0005-hsi-canonical-contract.md`
-- **Validation schema (HSI 1.2, canonical for this repo)**: `schema/hsi-1.2.schema.json` — windows registry, provenance sources, per-reading `inference_mode` / `model_id`, optional `axes.emotion` ([RFC-HSI-0007](docs/RFC-HSI-0007.md))
-- **Earlier schema (HSI 1.1)**: `schema/hsi-1.1.schema.json` — retained for historical payloads
+- **Authoritative RFC (HSI 1.2)**: [`docs/RFC-HSI-0008.md`](docs/RFC-HSI-0008.md) — canonical 1.2 contract; supersedes RFC-0005 and folds in RFC-HSI-0007
+- **Historical RFC (HSI 1.0)**: [`docs/RFC-0005-hsi-canonical-contract.md`](docs/RFC-0005-hsi-canonical-contract.md)
+- **Context axis guidance**: [`docs/RFC-HSI-0006.md`](docs/RFC-HSI-0006.md)
+- **Draft RFC (HSI 1.3, proposed)**: [`docs/RFC-HSI-0009.md`](docs/RFC-HSI-0009.md) — optional payload integrity block (content hash + detached signature)
+- **Validation schema (HSI 1.2, canonical)**: `schema/hsi-1.2.schema.json`
+- **Earlier schemas**: `schema/hsi-1.1.schema.json`, `schema/hsi-1.0.schema.json` — retained for historical payloads
 - **Versioning policy**: `versioning.md`
 - **Security and privacy**: `SECURITY.md`
 - **Examples**: `examples/`

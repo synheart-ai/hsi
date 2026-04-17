@@ -2,8 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY introduce breaking contract changes until `2.0`. See [`versioning.md`](versioning.md) for the full stability policy.
 
 ## [1.2] - 2026-04-18
 
@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking (contract)**: Window timestamps renamed to `start_utc` / `end_utc` (replacing `start` / `end`).
 - **Breaking (contract)**: Axis domains are arrays of readings under `axes.<domain>` (replacing `axes.<domain>.readings[]`).
 - Examples under `examples/valid/`, invalid fixtures under `examples/invalid/`, and `test-vectors/` updated to `hsi_version: "1.2"` and the new shapes.
-- Strict validator (`tests/hsi_validate.py`): HSI 1.2 uses provenance-backed evidence checks, `start_utc`/`end_utc` ordering, and window references via `/windows` keys; HSI 1.0/1.1 payloads still use the legacy strict path when `hsi_version` is not `1.2`.
-- Pytest suite validates all fixtures against `hsi-1.2.schema.json` only.
+- Strict validator (`tests/hsi_validate.py`): split into explicit per-version paths `_validate_strict_10` / `_validate_strict_11` / `_validate_strict_12` dispatched by `hsi_version`. Each path enforces the reference-integrity rules specific to that version's field shape (e.g. 1.0 `window_id` singular + top-level sources/source_ids; 1.1 `name`/`value` + `meta.provenance.sources`; 1.2 `score` + refined `inference_mode` vocabulary).
+- Pytest suite routes each fixture to the schema matching its declared `hsi_version`; regression fixtures added under `test-vectors/v1.0/` and `test-vectors/v1.1/` to keep the older strict paths exercised in CI.
 
 ## [1.1] - 2026-03-01
 
