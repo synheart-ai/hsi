@@ -42,9 +42,18 @@
     "contains_pii": false,
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true,
-    "notes": "No PII; physiological-only payload."
+    "consent": "implicit",
+    "purposes": ["personalization"]
   },
   "meta": {
-    "intent": "Valid example: physiological domain only."
+    "intent": "Valid example: physiological domain only.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [
+        { "id": "synheart-physio", "version": "2.0.0" }
+      ],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }

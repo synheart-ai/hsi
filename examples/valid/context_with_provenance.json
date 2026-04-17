@@ -64,13 +64,17 @@
     "contains_pii": false,
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true,
-    "notes": "No PII; context axes contain only numeric qualifiers."
+    "consent": "implicit",
+    "purposes": ["personalization"]
   },
   "meta": {
-    "intent": "Valid example: context domain with provenance (RFC-HSI-0006).",
+    "intent": "Valid example: context domain with full provenance.",
     "provenance": {
       "baseline_status": "READY",
-      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }],
+      "equation_id": "eq-context-v1.0",
+      "engine": "synheart-flux",
+      "engine_version": "1.1.0"
     }
   }
 }

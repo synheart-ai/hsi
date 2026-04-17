@@ -4,7 +4,8 @@
   "computed_at_utc": "2025-12-28T00:03:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
   },
   "windows": {
     "w1": {
@@ -29,7 +30,9 @@
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
+    "purposes": ["research"]
   },
   "meta": {
     "intent": "Invalid example: window_ids reference a missing window key."

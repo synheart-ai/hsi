@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -21,13 +20,16 @@ _INFERENCE_MODES = frozenset(
 
 
 def _parse_rfc3339(dt_str: str) -> datetime:
-    # Python's fromisoformat understands offsets like +00:00, but not trailing 'Z'.
     if dt_str.endswith("Z"):
         dt_str = dt_str[:-1] + "+00:00"
     return datetime.fromisoformat(dt_str)
 
 
 def _iter_axis_readings(payload: dict[str, Any]) -> Iterable[dict[str, Any]]:
+    """Iterate all axis readings across all domains.
+
+    Each domain is a plain array of axis_reading objects.
+    """
     axes = payload.get("axes")
     if not isinstance(axes, dict):
         return []
@@ -61,7 +63,6 @@ def load_schema_basic(schema_path: Path) -> dict[str, Any]:
 
     def walk(node: Any) -> Any:
         if isinstance(node, dict):
-            # AJV extension: enum: { "$data": "/window_ids" }
             if "enum" in node and isinstance(node["enum"], dict) and "$data" in node["enum"]:
                 node = dict(node)
                 node.pop("enum", None)
@@ -73,12 +74,10 @@ def load_schema_basic(schema_path: Path) -> dict[str, Any]:
     return walk(copy.deepcopy(schema))
 
 
-@dataclass(frozen=True)
 class StrictValidationError(Exception):
-    message: str
-
-    def __str__(self) -> str:
-        return self.message
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
 
 
 def validate_basic(payload: Any, schema_basic: dict[str, Any]) -> None:

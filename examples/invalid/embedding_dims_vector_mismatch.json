@@ -1,0 +1,59 @@
+{
+  "hsi_version": "1.2",
+  "observed_at_utc": "2025-12-28T00:02:00Z",
+  "computed_at_utc": "2025-12-28T00:02:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0",
+    "instance_id": "d9776c5c-7a2e-4f7e-a827-7db9b2e2edc1"
+  },
+  "windows": {
+    "w1": {
+      "start_utc": "2025-12-28T00:01:50Z",
+      "end_utc": "2025-12-28T00:02:00Z",
+      "label": "10s_window"
+    }
+  },
+  "axes": {
+    "behavior": [
+      {
+        "name": "attention",
+        "score": 0.73,
+        "confidence": 0.58,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://attention_v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
+  },
+  "embeddings": [
+    {
+      "window_id": "w1",
+      "dimension": 8,
+      "encoding": "float32",
+      "confidence": 0.52,
+      "vector": [0.12, -0.03, 0.44, 0.09],
+      "vector_hash": "sha256:a1b2c3d4e5f6",
+      "model": "example.invalid/model/example-embed-1"
+    }
+  ],
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true,
+    "embedding_allowed": true,
+    "consent": "explicit",
+    "purposes": ["research"]
+  },
+  "meta": {
+    "intent": "Invalid example: embedding.dimension does not equal len(embedding.vector).",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
+  }
+}

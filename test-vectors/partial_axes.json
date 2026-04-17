@@ -4,7 +4,8 @@
   "computed_at_utc": "2025-12-28T00:07:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2d"
   },
   "windows": {
     "w1": {
@@ -35,9 +36,17 @@
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
+    "purposes": ["personalization"]
   },
   "meta": {
-    "intent": "Test vector: partial axes (physiological only), no embeddings, no provenance sources."
+    "intent": "Test vector: partial axes (physiological only), no embeddings, no provenance sources.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [{ "id": "synheart-physio", "version": "2.0.0" }],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }

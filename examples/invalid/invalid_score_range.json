@@ -4,12 +4,14 @@
   "computed_at_utc": "2025-12-28T00:04:00Z",
   "producer": {
     "name": "Example Producer",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "instance_id": "f1e2d3c4-b5a6-9788-7654-321fedcba098"
   },
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:03:50Z",
-      "end_utc": "2025-12-28T00:04:00Z"
+      "end_utc": "2025-12-28T00:04:00Z",
+      "label": "10s_window"
     }
   },
   "axes": {
@@ -29,9 +31,17 @@
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
-    "derived_metrics_allowed": true
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
+    "purposes": ["research"]
   },
   "meta": {
-    "intent": "Invalid example: score is outside the [0,1] range."
+    "intent": "Invalid example: score is outside the [0,1] range.",
+    "provenance": {
+      "baseline_status": "READY",
+      "providers": [{ "id": "synheart-behavior", "version": "1.0.0" }],
+      "engine": "synheart-flux",
+      "engine_version": "1.0.0"
+    }
   }
 }
