@@ -1,30 +1,30 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:03:00Z",
   "computed_at_utc": "2025-12-28T00:03:00Z",
   "producer": {
     "name": "Example Producer",
     "version": "1.0.0"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:02:50Z",
-      "end": "2025-12-28T00:03:00Z"
+      "start_utc": "2025-12-28T00:02:50Z",
+      "end_utc": "2025-12-28T00:03:00Z"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.6,
-          "confidence": 0.6,
-          "window_id": "w_missing",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "score": 0.6,
+        "confidence": 0.6,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/valence-v1",
+        "window_ids": ["w_missing"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -32,8 +32,6 @@
     "derived_metrics_allowed": true
   },
   "meta": {
-    "intent": "Invalid example: window_id references a missing window."
+    "intent": "Invalid example: window_ids reference a missing window key."
   }
 }
-
-

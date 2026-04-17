@@ -1,30 +1,30 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:04:00Z",
   "computed_at_utc": "2025-12-28T00:04:00Z",
   "producer": {
     "name": "Example Producer",
     "version": "1.0.0"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:03:50Z",
-      "end": "2025-12-28T00:04:00Z"
+      "start_utc": "2025-12-28T00:03:50Z",
+      "end_utc": "2025-12-28T00:04:00Z"
     }
   },
   "axes": {
-    "behavior": {
-      "readings": [
-        {
-          "axis": "engagement",
-          "score": 1.2,
-          "confidence": 0.9,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "behavior": [
+      {
+        "name": "engagement",
+        "score": 1.2,
+        "confidence": 0.9,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/engagement-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -35,5 +35,3 @@
     "intent": "Invalid example: score is outside the [0,1] range."
   }
 }
-
-

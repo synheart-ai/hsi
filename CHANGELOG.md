@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2] - 2026-04-18
 
+### Added
+
+- Canonical validation schema `schema/hsi-1.2.schema.json` as the contract version exercised by examples, test vectors, and CI.
+- `axes.emotion` domain (optional) using the same per-reading shape as other domains.
+- Per-axis-reading `inference_mode` and `model_id` (required), `window_ids` (array), and `name` (replaces legacy `axis`).
+
+### Changed
+
+- **Breaking (contract)**: Top-level `window_ids` / `source_ids` / `sources` removed in favor of `windows` map keys as the sole window registry and `meta.provenance.sources` for evidence.
+- **Breaking (contract)**: Window timestamps renamed to `start_utc` / `end_utc` (replacing `start` / `end`).
+- **Breaking (contract)**: Axis domains are arrays of readings under `axes.<domain>` (replacing `axes.<domain>.readings[]`).
+- Examples under `examples/valid/`, invalid fixtures under `examples/invalid/`, and `test-vectors/` updated to `hsi_version: "1.2"` and the new shapes.
+- Strict validator (`tests/hsi_validate.py`): HSI 1.2 uses provenance-backed evidence checks, `start_utc`/`end_utc` ordering, and window references via `/windows` keys; HSI 1.0/1.1 payloads still use the legacy strict path when `hsi_version` is not `1.2`.
+- Pytest suite validates all fixtures against `hsi-1.2.schema.json` only.
 
 ## [1.1] - 2026-02-21
 

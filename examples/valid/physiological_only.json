@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:00:10Z",
   "computed_at_utc": "2025-12-28T00:00:10Z",
   "producer": {
@@ -7,33 +7,36 @@
     "version": "1.0.0",
     "instance_id": "0b6f3ac9-62f5-4c9f-9f0d-4c4b3f6b2a3b"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:00:00Z",
-      "end": "2025-12-28T00:00:10Z",
+      "start_utc": "2025-12-28T00:00:00Z",
+      "end_utc": "2025-12-28T00:00:10Z",
       "label": "10s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.62,
-          "confidence": 0.71,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "arousal",
-          "score": 0.44,
-          "confidence": 0.68,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "score": 0.62,
+        "confidence": 0.71,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/valence-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "arousal",
+        "score": 0.44,
+        "confidence": 0.68,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/arousal-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -45,5 +48,3 @@
     "intent": "Valid example: physiological domain only."
   }
 }
-
-

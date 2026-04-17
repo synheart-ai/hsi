@@ -1,32 +1,32 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:10:00Z",
   "computed_at_utc": "2025-12-28T00:10:01Z",
   "producer": {
     "name": "Example Producer",
     "version": "1.0.0"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:09:00Z",
-      "end": "2025-12-28T00:10:00Z",
+      "start_utc": "2025-12-28T00:09:00Z",
+      "end_utc": "2025-12-28T00:10:00Z",
       "label": "60s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "stress",
-          "score": null,
-          "confidence": 0.42,
-          "window_id": "w1",
-          "direction": "higher_is_more",
-          "notes": "Score is null due to missing authorized sources."
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "stress",
+        "score": null,
+        "confidence": 0.42,
+        "direction": "higher_is_more",
+        "inference_mode": "external_provider",
+        "model_id": "provider://stress-unavailable",
+        "window_ids": ["w1"],
+        "evidence_source_ids": [],
+        "notes": "Score is null due to missing authorized sources."
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -37,5 +37,3 @@
     "null_reading_reason": "access_control_or_missing_sources"
   }
 }
-
-

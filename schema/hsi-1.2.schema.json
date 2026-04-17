@@ -5,22 +5,21 @@
   "type": "object",
   "additionalProperties": false,
 
-  "$comment": "HSI 1.2 extends 1.1 with axes.emotion, refined per-reading inference_mode, and optional inference metadata on legacy axis_reading. Reference-integrity constraints are enforced out-of-band for HSI-VALIDATE-STRICT.",
+  "$comment": "HSI 1.2: Restores 1.1 structure (windows in root/meta, start_utc/end_utc) while adopting 1.2 logic (refined inference_mode, 1.2 privacy, and 'score' naming). HSI is a contract-only interface. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
 
   "required": [
     "hsi_version",
     "observed_at_utc",
     "computed_at_utc",
     "producer",
-    "window_ids",
     "windows",
     "privacy"
   ],
 
   "properties": {
-    "hsi_version": {
-      "type": "string",
-      "const": "1.2"
+    "hsi_version": { 
+      "type": "string", 
+      "const": "1.2" 
     },
 
     "observed_at_utc": {
@@ -37,34 +36,12 @@
 
     "producer": { "$ref": "#/$defs/producer" },
 
-    "window_ids": {
-      "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": { "$ref": "#/$defs/id" }
-    },
-
     "windows": {
       "type": "object",
       "minProperties": 1,
       "propertyNames": { "$ref": "#/$defs/id" },
       "additionalProperties": { "$ref": "#/$defs/window" },
-      "$comment": "HSI-VALIDATE-STRICT: windows object keys MUST match /window_ids exactly."
-    },
-
-    "source_ids": {
-      "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": { "$ref": "#/$defs/id" }
-    },
-
-    "sources": {
-      "type": "object",
-      "minProperties": 1,
-      "propertyNames": { "$ref": "#/$defs/id" },
-      "additionalProperties": { "$ref": "#/$defs/source" },
-      "$comment": "HSI-VALIDATE-STRICT: sources keys MUST match /source_ids when present."
+      "$comment": "Map keys are the authoritative window IDs. axis_reading.window_ids and embedding.window_ids SHOULD reference these keys."
     },
 
     "axes": { "$ref": "#/$defs/axes" },
@@ -78,20 +55,12 @@
 
     "meta": {
       "type": "object",
-      "$comment": "RFC-HSI-0006 / RFC-HSI-0007: meta may include provenance and other producer-defined keys."
+      "properties": {
+        "provenance": { "$ref": "#/$defs/provenance" }
+      },
+      "$comment": "meta may include provenance and other producer-defined keys. meta.provenance is the canonical place for source tracking in this version."
     }
   },
-
-  "allOf": [
-    {
-      "if": { "required": ["sources"] },
-      "then": { "required": ["source_ids"] }
-    },
-    {
-      "if": { "required": ["source_ids"] },
-      "then": { "required": ["sources"] }
-    }
-  ],
 
   "$defs": {
     "id": {
@@ -119,18 +88,13 @@
     "window": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start", "end"],
+      "required": ["start_utc", "end_utc"],
       "properties": {
-        "start": { "type": "string", "format": "date-time" },
-        "end": { "type": "string", "format": "date-time" },
+        "start_utc": { "type": "string", "format": "date-time" },
+        "end_utc": { "type": "string", "format": "date-time" },
         "label": { "type": "string" }
       },
-      "$comment": "HSI-VALIDATE-STRICT: window.end MUST be >= window.start."
-    },
-
-    "axis_name": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+      "$comment": "HSI-VALIDATE-STRICT: window.end_utc MUST be >= window.start_utc (out-of-band unless validator supports format comparisons)."
     },
 
     "direction": {
@@ -152,112 +116,50 @@
     "axis_reading": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["axis", "score", "confidence", "window_id"],
-      "properties": {
-        "axis": { "$ref": "#/$defs/axis_name" },
-        "score": {
-          "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
-          "$comment": "score MAY be null when a producer cannot compute a reading; consumers MUST NOT treat null as zero."
-        },
-        "confidence": { "$ref": "#/$defs/score01" },
-
-        "window_id": {
-          "$ref": "#/$defs/id",
-          "$comment": "SHOULD reference /window_ids."
-        },
-
-        "direction": { "$ref": "#/$defs/direction" },
-
-        "unit": {
-          "type": "string",
-          "minLength": 1
-        },
-
-        "evidence_source_ids": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/id" }
-        },
-
-        "inference_mode": { "$ref": "#/$defs/inference_mode" },
-        "model_id": {
-          "type": "string",
-          "minLength": 1
-        },
-
-        "notes": { "type": "string" }
-      }
-    },
-
-    "emotion_reading": {
-      "type": "object",
-      "additionalProperties": false,
       "required": [
-        "name",
-        "value",
-        "confidence",
-        "direction",
-        "window_ids",
+        "name", 
+        "score", 
+        "confidence", 
+        "direction", 
+        "window_ids", 
         "evidence_source_ids",
         "inference_mode",
         "model_id"
       ],
       "properties": {
-        "name": {
-          "type": "string",
-          "const": "emotion"
-        },
-        "value": {
-          "type": "object",
-          "minProperties": 1,
-          "propertyNames": { "$ref": "#/$defs/axis_name" },
-          "additionalProperties": { "$ref": "#/$defs/score01" },
-          "$comment": "Class label -> mass in [0,1]; producers SHOULD normalize to sum 1.0 for a full distribution."
+        "name": { "type": "string" },
+        "score": {
+          "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
+          "$comment": "score MAY be null when a producer cannot compute a reading; consumers MUST NOT treat null as zero."
         },
         "confidence": { "$ref": "#/$defs/score01" },
         "direction": { "$ref": "#/$defs/direction" },
+        "inference_mode": { "$ref": "#/$defs/inference_mode" },
+        "model_id": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "source_tier": { "type": "integer" },
         "window_ids": {
           "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/id" }
+          "items": { "$ref": "#/$defs/id" },
+          "$comment": "entries SHOULD reference keys in /windows."
         },
         "evidence_source_ids": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/id" }
+          "items": { 
+            "$ref": "#/$defs/id",
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources."
+          }
         },
-        "inference_mode": { "$ref": "#/$defs/inference_mode" },
-        "model_id": {
-          "type": "string",
-          "minLength": 1
-        }
+        "notes": { "type": "string" }
       }
     },
 
     "axes_domain": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["readings"],
-      "properties": {
-        "readings": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/axis_reading" }
-        }
-      }
-    },
-
-    "emotion_axes_domain": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["readings"],
-      "properties": {
-        "readings": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/emotion_reading" }
-        }
-      }
+      "type": "array",
+      "items": { "$ref": "#/$defs/axis_reading" }
     },
 
     "axes": {
@@ -268,7 +170,7 @@
         "engagement": { "$ref": "#/$defs/axes_domain" },
         "behavior": { "$ref": "#/$defs/axes_domain" },
         "context": { "$ref": "#/$defs/axes_domain" },
-        "emotion": { "$ref": "#/$defs/emotion_axes_domain" }
+        "emotion": { "$ref": "#/$defs/axes_domain" }
       }
     },
 
@@ -279,18 +181,37 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "sensor",
-            "app",
-            "self_report",
-            "observer",
-            "derived",
-            "other"
-          ]
+          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"]
         },
         "quality": { "$ref": "#/$defs/score01" },
         "degraded": { "type": "boolean" },
         "notes": { "type": "string" }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/source" },
+          "$comment": "Map keys are the authoritative source IDs. evidence_source_ids on axis_reading SHOULD reference these keys."
+        },
+        "baseline_status": { "type": "string" },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        },
+        "engine": { "type": "string" },
+        "engine_version": { "type": "string" }
       }
     },
 
@@ -299,22 +220,22 @@
       "additionalProperties": false,
       "required": ["window_id", "dimension", "encoding", "confidence"],
       "properties": {
-        "window_id": {
-          "$ref": "#/$defs/id"
+        "window_id": { 
+          "$ref": "#/$defs/id",
+          "$comment": "SHOULD reference a key in /windows."
         },
         "vector": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "number" }
+          "items": { "type": "number" },
+          "$comment": "Include only when privacy allows."
         },
-        "vector_hash": {
+        "vector_hash": { 
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "$comment": "Recommended even if vector is present."
         },
-        "dimension": {
-          "type": "integer",
-          "minimum": 1
-        },
+        "dimension": { "type": "integer", "minimum": 1 },
         "encoding": {
           "type": "string",
           "enum": ["float32", "float64", "fp16", "int8"]

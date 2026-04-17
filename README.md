@@ -1,6 +1,6 @@
 ## Human State Interface (HSI)
 
-[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](schema/hsi-1.1.schema.json)
+[![Version](https://img.shields.io/badge/version-1.2-blue.svg)](schema/hsi-1.2.schema.json)
 [![Schema](https://img.shields.io/badge/schema-JSON%20Draft%202020--12-green.svg)](https://json-schema.org/draft/2020-12/schema)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![RFC](https://img.shields.io/badge/RFC-0005-purple.svg)](docs/RFC-0005-hsi-canonical-contract.md)
@@ -66,8 +66,8 @@ for human-state outputs — independent of devices, models, or vendors.
 ### Specification entry points
 
 - **Authoritative RFC**: `docs/RFC-0005-hsi-canonical-contract.md`
-- **Validation schema (HSI 1.1)**: `schema/hsi-1.1.schema.json`
-- **Validation schema (HSI 1.2)**: `schema/hsi-1.2.schema.json` — emotion head + `inference_mode` vocabulary ([RFC-HSI-0007](docs/RFC-HSI-0007.md))
+- **Validation schema (HSI 1.2, canonical for this repo)**: `schema/hsi-1.2.schema.json` — windows registry, provenance sources, per-reading `inference_mode` / `model_id`, optional `axes.emotion` ([RFC-HSI-0007](docs/RFC-HSI-0007.md))
+- **Earlier schema (HSI 1.1)**: `schema/hsi-1.1.schema.json` — retained for historical payloads
 - **Versioning policy**: `versioning.md`
 - **Security and privacy**: `SECURITY.md`
 - **Examples**: `examples/`
@@ -77,7 +77,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 ```json
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:00:10Z",
   "computed_at_utc": "2025-12-28T00:00:10Z",
   "producer": {
@@ -85,50 +85,58 @@ for human-state outputs — independent of devices, models, or vendors.
     "version": "1.0.0",
     "instance_id": "0b6f3ac9-62f5-4c9f-9f0d-4c4b3f6b2a3b"
   },
-  "window_ids": ["w1"],
   "windows": {
     "w1": {
-      "start": "2025-12-28T00:00:00Z",
-      "end": "2025-12-28T00:00:10Z",
+      "start_utc": "2025-12-28T00:00:00Z",
+      "end_utc": "2025-12-28T00:00:10Z",
       "label": "10s_window"
     }
   },
   "axes": {
-    "physiological": {
-      "readings": [
-        {
-          "axis": "valence",
-          "score": 0.62,
-          "confidence": 0.71,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "arousal",
-          "score": 0.44,
-          "confidence": 0.68,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        }
-      ]
-    },
-    "context": {
-      "readings": [
-        {
-          "axis": "activity_still_conf",
-          "score": 0.93,
-          "confidence": 0.88,
-          "window_id": "w1",
-          "direction": "higher_is_more"
-        },
-        {
-          "axis": "baseline_ready",
-          "score": 1,
-          "confidence": 1.0,
-          "window_id": "w1"
-        }
-      ]
-    }
+    "physiological": [
+      {
+        "name": "valence",
+        "score": 0.62,
+        "confidence": 0.71,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/valence-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "arousal",
+        "score": 0.44,
+        "confidence": 0.68,
+        "direction": "higher_is_more",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/arousal-v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ],
+    "context": [
+      {
+        "name": "activity_still_conf",
+        "score": 0.93,
+        "confidence": 0.88,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://context_activity_v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "baseline_ready",
+        "score": 1,
+        "confidence": 1.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://baseline_flags_v1",
+        "window_ids": ["w1"],
+        "evidence_source_ids": []
+      }
+    ]
   },
   "privacy": {
     "contains_pii": false,
@@ -144,7 +152,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 ### Notes on axes, null readings, and embeddings
 
-- **Axis domains**: HSI 1.1 groups readings under `axes.physiological`, `axes.behavior`, `axes.engagement`, and `axes.context`. The context domain (added in RFC-HSI-0006) carries numeric runtime-condition qualifiers used to interpret other axes.
+- **Axis domains**: HSI 1.2 lists readings under `axes.physiological`, `axes.behavior`, `axes.engagement`, `axes.context`, and optional `axes.emotion` (each domain is an array of readings). The context domain carries numeric runtime-condition qualifiers used to interpret other axes (RFC-HSI-0006). Non-empty `evidence_source_ids` SHOULD reference keys in `meta.provenance.sources`.
 - **Null readings**: A producer MAY include an axis reading with `score: null` when the reading is unavailable (e.g., access-control, missing sources). A null score MUST be accompanied by an explanation (typically in `meta`) and MUST NOT be interpreted as zero.
 - **Embeddings**: If `embeddings[]` is present, each embedding includes `dimension`, `encoding`, and `confidence`, and includes at least one of `vector` and/or `vector_hash`. Consumers MUST NOT assume vectors are always present.
 
@@ -154,7 +162,7 @@ for human-state outputs — independent of devices, models, or vendors.
 
 This repo includes a small test suite that validates:
 
-- **HSI-VALIDATE-BASIC**: Draft 2020-12 structural + range validation against `schema/hsi-1.1.schema.json`
+- **HSI-VALIDATE-BASIC**: Draft 2020-12 structural + range validation against `schema/hsi-1.2.schema.json`
 - **HSI-VALIDATE-STRICT**: additional cross-field integrity checks (e.g., `window_id` references, time ordering)
 
 Run locally:
