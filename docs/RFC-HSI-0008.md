@@ -88,7 +88,10 @@ Every axis reading is an object with the following **required** fields:
 - `window_ids` (array of strings, `uniqueItems: true`): SHOULD reference keys in `/windows`.
 - `evidence_source_ids` (array of strings, `uniqueItems: true`): SHOULD reference keys in `meta.provenance.sources`. MAY be empty.
 
-Optional: `notes` (string; MUST NOT include PII).
+Optional:
+
+- `source_tier` (integer in `1..=4`): signal-fidelity tier of the evidence backing this reading; see §6.7.
+- `notes` (string; MUST NOT include PII).
 
 Axes with inherently categorical outputs MUST NOT be represented as axis readings.
 
@@ -124,6 +127,21 @@ Consumers MUST NOT assume a closed set of axis *names*; unknown names within a k
 - Consumers MUST distinguish **omitted** from **present-but-null**.
 - A `null` score MUST be accompanied by a non-empty `meta` explanation (e.g. `meta.null_reading_reason` with an access-control reason code).
 
+### 6.7 Source fidelity tiers
+
+Readings and embeddings MAY carry an optional `source_tier` (integer `1..=4`) describing the fidelity of the evidence signals that informed them. Higher tier numbers indicate lower signal fidelity.
+
+| Tier | Evidence class | Typical examples |
+|---|---|---|
+| 1 | Ground-truth | Beat-to-beat intervals, raw sensor streams, lab-grade measurements |
+| 2 | Vendor-derived high-fidelity | Calibrated HRV metrics, vendor-fused biosignal features |
+| 3 | Proxy time-series | Coarse-rate heart-rate traces, motion proxies — trend-level information only |
+| 4 | Snapshot / minimal | Single spot values or low-resolution checks — coarse signals only |
+
+Producers SHOULD set `source_tier` to the **most conservative** (highest-numbered) tier among the inputs that materially contributed to the reading. Consumers SHOULD use `source_tier` to cap downstream trust: for example, probabilistic models may refuse to run when `source_tier >= 3`, and confidence ceilings MAY decrease monotonically with tier. `source_tier` is orthogonal to `confidence`: confidence measures the producer's certainty; `source_tier` measures the fidelity of the inputs the producer worked with.
+
+Embeddings carry `source_tier` under the same semantics, set to the tier of the worst contributing source in the window.
+
 ## 7. Sources and provenance
 
 HSI 1.2 carries source metadata inside `meta.provenance.sources`. The source-map keys are the authoritative source-identifier set.
@@ -147,6 +165,8 @@ Embeddings are optional. Each embedding MUST:
 If both `vector` and `dimension` are present, `dimension` MUST equal `len(vector)`.
 
 `vector_hash`, when present, MUST match `^sha256:[0-9a-f]{64}$`. Producers SHOULD compute the hash over a canonical encoding of the embedding content; **RFC 8785 (JSON Canonicalization Scheme)** is RECOMMENDED for canonicalizing the vector array before hashing. If `vector_hash` is present without `vector`, consumers MUST NOT assume the vector is available in the payload.
+
+Embeddings MAY also carry an optional `source_tier` (integer `1..=4`) with the semantics defined in §6.7.
 
 Embeddings MAY leak sensitive information (see `SECURITY.md`). Producers SHOULD treat embeddings as sensitive and restrict their distribution.
 
