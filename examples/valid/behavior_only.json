@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:01:00Z",
   "computed_at_utc": "2025-12-28T00:01:00Z",
   "producer": {
@@ -10,30 +10,28 @@
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:00:50Z",
-      "end_utc": "2025-12-28T00:01:00Z",
-      "label": "10s_window",
-      "aggregation": "instant"
+      "end_utc": "2025-12-28T00:01:00Z"
     }
   },
   "axes": {
     "behavior": [
       {
         "name": "engagement",
-        "value": 0.77,
+        "score": 0.77,
         "confidence": 0.63,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-engagement-v1",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/engagement-v1",
         "window_ids": ["w1"],
         "evidence_source_ids": []
       },
       {
         "name": "task_persistence",
-        "value": 0.58,
+        "score": 0.58,
         "confidence": 0.55,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-persistence-v1",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/task-persistence-v1",
         "window_ids": ["w1"],
         "evidence_source_ids": []
       }
@@ -41,21 +39,16 @@
   },
   "privacy": {
     "contains_pii": false,
-    "consent": {
-      "level": "implicit",
-      "embedding": false,
-      "raw_biosignals": false,
-      "derived_metrics": true
-    },
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
     "purposes": ["personalization"]
   },
   "meta": {
     "intent": "Valid example: behavior domain only.",
     "provenance": {
       "baseline_status": "READY",
-      "providers": [
-        { "id": "synheart-behavior", "version": "1.0.0" }
-      ],
+      "providers": [{ "id": "synheart-behavior", "version": "1.0.0" }],
       "engine": "synheart-flux",
       "engine_version": "1.0.0"
     }

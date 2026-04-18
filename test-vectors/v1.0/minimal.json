@@ -1,0 +1,50 @@
+{
+  "hsi_version": "1.0",
+  "observed_at_utc": "2025-12-28T00:00:10Z",
+  "computed_at_utc": "2025-12-28T00:00:10Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0",
+    "instance_id": "a1b2c3d4-5678-4abc-9def-0123456789ab"
+  },
+  "window_ids": ["w1"],
+  "windows": {
+    "w1": {
+      "start": "2025-12-28T00:00:00Z",
+      "end": "2025-12-28T00:00:10Z",
+      "label": "10s_window"
+    }
+  },
+  "source_ids": ["s_wearable"],
+  "sources": {
+    "s_wearable": {
+      "type": "sensor",
+      "quality": 0.92,
+      "degraded": false
+    }
+  },
+  "axes": {
+    "affect": {
+      "readings": [
+        {
+          "axis": "valence",
+          "score": 0.62,
+          "confidence": 0.71,
+          "window_id": "w1",
+          "direction": "higher_is_more",
+          "evidence_source_ids": ["s_wearable"]
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
+    "purposes": ["research"]
+  },
+  "meta": {
+    "intent": "HSI 1.0 regression fixture: exercises the 1.0 strict path (window_id singular, top-level sources, axes.<domain>.readings[])."
+  }
+}

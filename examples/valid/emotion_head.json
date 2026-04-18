@@ -1,0 +1,49 @@
+{
+  "hsi_version": "1.2",
+  "observed_at_utc": "2026-03-15T14:00:00Z",
+  "computed_at_utc": "2026-03-15T14:00:01Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.0.0",
+    "instance_id": "d9776c5c-7a2e-4f7e-a827-7db9b2e2edc1"
+  },
+  "windows": {
+    "win_a15c1b6a5e695f783b7a9c363115065df3d06af820f84494": {
+      "start_utc": "2026-03-15T13:59:00Z",
+      "end_utc": "2026-03-15T14:00:00Z",
+      "label": "60s_window"
+    }
+  },
+  "axes": {
+    "emotion": [
+      {
+        "name": "emotion.baseline",
+        "score": 0.44,
+        "confidence": 0.56,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://stress_v1",
+        "window_ids": ["win_a15c1b6a5e695f783b7a9c363115065df3d06af820f84494"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "emotion.stress",
+        "score": 0.56,
+        "confidence": 0.56,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://stress_v1",
+        "window_ids": ["win_a15c1b6a5e695f783b7a9c363115065df3d06af820f84494"],
+        "evidence_source_ids": []
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "intent": "HSI 1.2: axes.emotion domain with per-class readings (masses should sum to 1.0 when representing a full distribution)."
+  }
+}
