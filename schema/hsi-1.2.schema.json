@@ -154,6 +154,7 @@
             "$comment": "entries SHOULD reference keys in meta.provenance.sources."
           }
         },
+        "source_tier": { "type": "integer" },
         "notes": { "type": "string" }
       }
     },
@@ -289,19 +290,11 @@
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "type": "string",
-            "enum": [
-              "research",
-              "personalization",
-              "safety_monitoring",
-              "clinical_support",
-              "product_telemetry",
-              "other"
-            ]
+            "type": "string"
           },
-          "$comment": "Controlled vocabulary. Producers emitting a purpose outside this set MUST use 'other' and describe the specific purpose in privacy.notes."
+          "$comment": "Open-ended array of strings. Producers are free to use any string they want, as long as it is not PII. examples: 'research', 'personalization', 'safety_monitoring', 'clinical_support', 'product_telemetry', 'other'"
         },
-        "notes": { "type": "string" }
+        "notes": { "type": "string", "$comment": "Non-normative clarification (MUST NOT include PII)." }
       }
     }
   }
