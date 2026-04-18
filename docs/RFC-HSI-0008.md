@@ -142,13 +142,23 @@ Producers SHOULD set `source_tier` to the **most conservative** (highest-numbere
 
 Embeddings carry `source_tier` under the same semantics, set to the tier of the worst contributing source in the window.
 
+`source_tier` MAY also be declared on the source itself in `meta.provenance.sources` (see §7). When present at the source level it is the **authoritative** tier for that channel, inherited by every reading or embedding that cites the source via `evidence_source_ids`. A reading or embedding MAY set its own `source_tier` to *override* the inherited value — typically to demote (cite a higher-numbered tier than the source declares) when only a degraded subset of the channel's signals materially contributed. Producers SHOULD NOT use a per-reading override to *promote* (cite a lower-numbered tier than the source declares); consumers MAY ignore such promotions. Resolution precedence for any single reading or embedding is therefore: per-reading / per-embedding `source_tier` (if set) → otherwise the worst-numbered tier among the cited sources' `source_tier` values → otherwise unknown.
+
 ## 7. Sources and provenance
 
 HSI 1.2 carries source metadata inside `meta.provenance.sources`. The source-map keys are the authoritative source-identifier set.
 
 - `meta.provenance.sources` is an object keyed by source id, non-empty when present.
-- Each source MUST include `type` (one of `sensor`, `app`, `self_report`, `observer`, `derived`, `other`), `quality` (number in `[0, 1]`), and `degraded` (boolean). Optional: `notes`.
+- Each source MUST include `type` (one of `sensor`, `app`, `self_report`, `observer`, `derived`, `other`), `quality` (number in `[0, 1]`), and `degraded` (boolean).
+- Each source MAY include the following optional descriptors:
+  - `device_class` (enum) — physical form factor (`strap`, `watch`, `ring`, `patch`, `wristband`, `armband`, `headset`, `glasses`, `earbud`, `phone`, `tablet`, `desktop`, `other`). Only meaningful when `type` is hardware-bearing (typically `sensor`).
+  - `signals` (array of lowercase tokens) — physical or logical signals the source produces. Suggested canonical names: `hrv`, `rr`, `ecg`, `ppg`, `spo2`, `resp`, `accel`, `gyro`, `mag`, `temp`, `eda`, `gsr`, `eeg`, `emg`, `touch`, `audio`. Consumers SHOULD tolerate unknown entries.
+  - `transport` (enum) — how data reaches the producer (`ble`, `ant`, `wifi`, `usb`, `wired`, `nfc`, `inproc`, `network`, `other`). `inproc` denotes same-process platform SDKs; `network` is generic IP when no more specific transport applies.
+  - `vendor` (string) — non-normative manufacturer tag (e.g. `polar`, `whoop`, `garmin`, `apple`). Highest-entropy field in `source`; producers SHOULD omit `vendor` in privacy-sensitive contexts where payloads may be joined across subjects.
+  - `source_tier` (integer in `1..=4`) — authoritative signal-fidelity tier for the source; inherited by readings and embeddings that cite this source. See §6.7.
+  - `notes` (string; MUST NOT include PII).
 - `axis_reading.evidence_source_ids` entries MUST reference declared source ids.
+- `embedding.evidence_source_ids` entries MUST reference declared source ids (same semantics as `axis_reading.evidence_source_ids`).
 
 `meta.provenance` MAY also include `baseline_status` (string), `providers` (array of `{id, version}`), `engine` (string), `engine_version` (string), `equation_id` (string), `merge_rule_id` (string), `srm_snapshot_id` (string). Fields not declared in the schema MUST be rejected; `meta.provenance` uses `additionalProperties: false`.
 
@@ -167,6 +177,8 @@ If both `vector` and `dimension` are present, `dimension` MUST equal `len(vector
 `vector_hash`, when present, MUST match `^sha256:[0-9a-f]{64}$`. Producers SHOULD compute the hash over a canonical encoding of the embedding content; **RFC 8785 (JSON Canonicalization Scheme)** is RECOMMENDED for canonicalizing the vector array before hashing. If `vector_hash` is present without `vector`, consumers MUST NOT assume the vector is available in the payload.
 
 Embeddings MAY also carry an optional `source_tier` (integer `1..=4`) with the semantics defined in §6.7.
+
+Embeddings MAY also carry an optional `evidence_source_ids` (array of strings, `uniqueItems: true`) declaring which sources backed the embedding. Entries SHOULD reference keys in `meta.provenance.sources`; HSI-VALIDATE-STRICT enforces reference integrity when the array is non-empty (§10). The semantics mirror `axis_reading.evidence_source_ids` (§6.2): consumers that care about signal fidelity resolve each id to its source descriptor for `type` / `quality` / `source_tier` / `degraded`.
 
 Embeddings MAY leak sensitive information (see `SECURITY.md`). Producers SHOULD treat embeddings as sensitive and restrict their distribution.
 
@@ -193,6 +205,7 @@ Optional fields:
   - `window.end_utc >= window.start_utc` for each declared window;
   - `axis_reading.window_ids` entries reference declared `/windows` keys;
   - `axis_reading.evidence_source_ids` entries reference declared `meta.provenance.sources` keys (when non-empty);
+  - `embedding.evidence_source_ids` entries reference declared `meta.provenance.sources` keys (when non-empty);
   - null-score readings require a non-empty top-level `meta`;
   - `embedding.window_id` references a declared window;
   - `embedding.dimension` equals `len(vector)` when `vector` is present.

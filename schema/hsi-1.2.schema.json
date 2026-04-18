@@ -190,10 +190,60 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"]
+          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"],
+          "$comment": "Role of the source — what kind of thing produced the signal. Orthogonal to `device_class` (physical form factor), `signals` (what is measured), and `transport` (how the bytes reach the producer)."
         },
         "quality": { "$ref": "#/$defs/score01" },
         "degraded": { "type": "boolean" },
+        "source_tier": {
+          "$ref": "#/$defs/source_tier",
+          "$comment": "Signal-fidelity tier declared at the source itself so every reading or embedding that cites this source inherits a single authoritative tier. Per-reading and per-embedding source_tier remain valid for consumers that need to override or scope the tier to a specific derivation."
+        },
+        "device_class": {
+          "type": "string",
+          "enum": [
+            "strap",
+            "watch",
+            "ring",
+            "patch",
+            "wristband",
+            "armband",
+            "headset",
+            "glasses",
+            "earbud",
+            "phone",
+            "tablet",
+            "desktop",
+            "other"
+          ],
+          "$comment": "Physical form factor. Only meaningful when `type` is a hardware-bearing role (typically `sensor`). Use `other` for unusual form factors; open an RFC before adding new canonical values so producers and consumers stay aligned."
+        },
+        "signals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "$comment": "Physical or logical signals this source produces. Free-form lowercase tokens; suggested canonical names: `hrv`, `rr`, `ecg`, `ppg`, `spo2`, `resp`, `accel`, `gyro`, `mag`, `temp`, `eda`, `gsr`, `eeg`, `emg`, `touch`, `audio`. Consumers SHOULD tolerate unknown entries (forward-compatibility)."
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "ble",
+            "ant",
+            "wifi",
+            "usb",
+            "wired",
+            "nfc",
+            "inproc",
+            "network",
+            "other"
+          ],
+          "$comment": "How data reaches the producer. `inproc` = same-process APIs (e.g. platform sensor SDKs). `network` = generic IP when no more specific transport applies. Use `other` for unusual transports; open an RFC before adding canonical values."
+        },
+        "vendor": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "Free-form vendor/manufacturer tag (e.g. `polar`, `whoop`, `garmin`, `apple`). Not an enum — keeps the schema stable as new vendors ship. Non-normative; consumers SHOULD NOT branch critical logic on this value. PRIVACY: vendor is the highest-entropy field in `source` and is the most correlatable with demographics (brand choice tracks income, tech-adoption patterns, region). It is not PII per GDPR/HIPAA, but it weakens the anti-fingerprinting posture implied by `privacy.contains_pii: false` when combined with session identifiers or cross-payload correlation. Producers SHOULD omit `vendor` in privacy-sensitive contexts — especially when `privacy.purposes` is research-only and payloads may be joined across subjects. Keep it when the consumer genuinely needs vendor-specific signal calibration (e.g., HRV algorithm differences between Polar and Garmin)."
+        },
         "notes": { "type": "string" }
       }
     },
@@ -246,7 +296,7 @@
       "additionalProperties": false,
       "required": ["window_id", "dimension", "encoding", "confidence"],
       "properties": {
-        "window_id": { 
+        "window_id": {
           "$ref": "#/$defs/id",
           "$comment": "SHOULD reference a key in /windows."
         },
@@ -268,7 +318,16 @@
         },
         "confidence": { "$ref": "#/$defs/score01" },
         "model": { "type": "string" },
-        "source_tier": { "$ref": "#/$defs/source_tier" }
+        "source_tier": { "$ref": "#/$defs/source_tier" },
+        "evidence_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id",
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources."
+          },
+          "$comment": "Mirrors axis_reading.evidence_source_ids so producers can declare which sources backed this embedding. Consumers that care about signal fidelity can resolve each id against meta.provenance.sources for type/quality/source_tier."
+        }
       },
       "allOf": [
         {

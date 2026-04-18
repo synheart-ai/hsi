@@ -12,6 +12,19 @@ HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY intro
 - Canonical validation schema `schema/hsi-1.2.schema.json` as the contract version exercised by examples, test vectors, and CI.
 - `axes.emotion` domain (optional) using the same per-reading shape as other domains.
 - Per-axis-reading `inference_mode` and `model_id` (required), `window_ids` (array), and `name` (replaces legacy `axis`).
+- `source.source_tier` (optional): signal-fidelity tier declared at the source itself in `meta.provenance.sources`, so every reading or embedding that cites the source inherits a single authoritative tier. Per-reading and per-embedding `source_tier` remain valid for overrides. Additive — existing payloads without `source_tier` on sources continue to validate.
+- `embedding.evidence_source_ids` (optional): mirrors `axis_reading.evidence_source_ids` so producers can declare which sources backed an embedding. Consumers resolve each id against `meta.provenance.sources` for type / quality / `source_tier`. HSI-VALIDATE-STRICT enforces reference integrity for non-empty arrays. Additive.
+- `source.device_class`, `source.signals`, `source.transport`, `source.vendor` (all optional): orthogonal descriptors alongside the existing `type` enum. `type` stays coarse ("role" — sensor / app / self_report / observer / derived / other); `device_class` captures physical form factor ("strap" / "watch" / "ring" / "patch" / …); `signals` is a free-form array of what the source measures (`ppg`, `hrv`, `ecg`, `accel`, …); `transport` captures how data reaches the producer (`ble` / `ant` / `inproc` / …); `vendor` is a non-normative manufacturer tag. Producers can describe an Apple Watch as `{ type: sensor, device_class: watch, signals: ["ppg","hrv","accel"], transport: ble, vendor: apple }` without ambiguity. Additive — existing sources that only set `type` continue to validate.
+- Example fixture `examples/valid/runtime_snapshot.json` mirroring the payload emitted by `synheart-state-runtime` (rulepack-driven axes across `physiological` / `engagement` / `emotion`, embedding with `evidence_source_ids`, per-source `source_tier` in provenance, producer-defined `meta.ids` + `meta.snapshot_type`).
+- Invalid fixtures `examples/invalid/embedding_unknown_evidence_source.json` and `examples/invalid/source_tier_out_of_range.json` covering the new surface area.
+- RFC-HSI-0008 §6.7 / §7 / §8 / §10 updated for the authoritative-source-tier semantics, the full `source` descriptor set, and `embedding.evidence_source_ids` (including its STRICT reference-integrity rule).
+- Strict validator (`tests/hsi_validate.py::_validate_strict_12`): `embedding.evidence_source_ids` entries are now checked against `meta.provenance.sources` keys for HSI-VALIDATE-STRICT compliance, matching the existing `axis_reading.evidence_source_ids` rule.
+
+### Privacy considerations (1.2 source descriptors)
+
+- `device_class`, `signals`, and `transport` describe equipment *capabilities* (analogous to a Content-Type header) with modest entropy on their own; they do not compromise `privacy.contains_pii: false`.
+- `vendor` is the highest-entropy addition and the one most relevant to fingerprinting. It is not PII per GDPR/HIPAA, but in combination with session identifiers or cross-payload correlation it narrows re-identification (brand choice correlates with income, tech-adoption, and region). Producers SHOULD omit `vendor` in privacy-sensitive contexts — especially when `privacy.purposes` is research-only and payloads may be joined across subjects. Retain it when the consumer genuinely needs vendor-specific signal calibration (e.g., HRV-algorithm differences between Polar and Garmin). The schema enforces no automatic stripping; this is a producer choice.
+- Consumers SHOULD tolerate absent descriptors (treat as unknown) rather than rejecting payloads that elect to redact for privacy reasons.
 
 ### Changed
 

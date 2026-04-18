@@ -316,7 +316,8 @@ def _validate_strict_12(payload: dict[str, Any]) -> None:
     - window.end_utc >= window.start_utc
     - axis_reading.window_ids reference declared /windows keys
     - embedding.window_id references a declared window key
-    - evidence_source_ids reference meta.provenance.sources keys when non-empty
+    - axis_reading.evidence_source_ids reference meta.provenance.sources keys when non-empty
+    - embedding.evidence_source_ids reference meta.provenance.sources keys when non-empty
     - null score readings require non-empty top-level meta (explanation)
     - inference_mode vocabulary when present
     - embedding.dimension equals len(vector) when vector is present
@@ -390,6 +391,20 @@ def _validate_strict_12(payload: dict[str, Any]) -> None:
                     raise StrictValidationError("embedding.vector must be an array when present")
                 if isinstance(dim, int) and dim != len(vec):
                     raise StrictValidationError("embedding.dimension must equal len(embedding.vector)")
+            evidence = emb.get("evidence_source_ids")
+            if evidence:
+                if prov_sources is None or not prov_sources:
+                    raise StrictValidationError(
+                        "embedding.evidence_source_ids present but meta.provenance.sources is missing or empty"
+                    )
+                if not isinstance(evidence, list):
+                    raise StrictValidationError("embedding.evidence_source_ids must be an array")
+                source_keys = set(prov_sources.keys())
+                for sid in evidence:
+                    if sid not in source_keys:
+                        raise StrictValidationError(
+                            f"embedding references unknown provenance source id '{sid}'"
+                        )
 
 
 # -------- dispatcher --------
