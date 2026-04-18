@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:03:00Z",
   "computed_at_utc": "2025-12-28T00:03:00Z",
   "producer": {
@@ -10,20 +10,18 @@
   "windows": {
     "w1": {
       "start_utc": "2025-12-28T00:02:50Z",
-      "end_utc": "2025-12-28T00:03:00Z",
-      "label": "10s_window",
-      "aggregation": "instant"
+      "end_utc": "2025-12-28T00:03:00Z"
     }
   },
   "axes": {
     "physiological": [
       {
         "name": "valence",
-        "value": 0.6,
+        "score": 0.6,
         "confidence": 0.6,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-valence-v2",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://example/valence-v1",
         "window_ids": ["w_missing"],
         "evidence_source_ids": []
       }
@@ -31,23 +29,12 @@
   },
   "privacy": {
     "contains_pii": false,
-    "consent": {
-      "level": "implicit",
-      "embedding": false,
-      "raw_biosignals": false,
-      "derived_metrics": true
-    },
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
     "purposes": ["research"]
   },
   "meta": {
-    "intent": "Invalid example: window_ids references a missing window.",
-    "provenance": {
-      "baseline_status": "READY",
-      "providers": [
-        { "id": "synheart-physio", "version": "2.0.0" }
-      ],
-      "engine": "synheart-flux",
-      "engine_version": "1.0.0"
-    }
+    "intent": "Invalid example: window_ids reference a missing window key."
   }
 }

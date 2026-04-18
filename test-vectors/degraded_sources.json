@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:05:00Z",
   "computed_at_utc": "2025-12-28T00:05:00Z",
   "producer": {
@@ -11,32 +11,30 @@
     "w1": {
       "start_utc": "2025-12-28T00:04:00Z",
       "end_utc": "2025-12-28T00:05:00Z",
-      "label": "60s_window",
-      "aggregation": "windowed"
+      "label": "60s_window"
     }
   },
   "axes": {
     "physiological": [
       {
         "name": "stress",
-        "value": 0.4,
+        "score": 0.4,
         "confidence": 0.35,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-stress-v2",
+        "inference_mode": "composite",
+        "model_id": "model://example/stress-degraded-v1",
         "window_ids": ["w1"],
-        "evidence_source_ids": ["s_sensor_a", "s_sensor_b"]
+        "evidence_source_ids": ["s_sensor_a", "s_sensor_b"],
+        "source_tier": 3,
+        "notes": "Stress estimated with degraded inputs."
       }
     ]
   },
   "privacy": {
     "contains_pii": false,
-    "consent": {
-      "level": "implicit",
-      "embedding": false,
-      "raw_biosignals": true,
-      "derived_metrics": true
-    },
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true,
+    "consent": "implicit",
     "purposes": ["research"]
   },
   "meta": {
@@ -57,9 +55,7 @@
         }
       },
       "baseline_status": "READY",
-      "providers": [
-        { "id": "synheart-stress", "version": "2.0.0" }
-      ],
+      "providers": [{ "id": "synheart-stress", "version": "2.0.0" }],
       "engine": "synheart-flux",
       "engine_version": "1.0.0"
     }

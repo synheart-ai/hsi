@@ -32,6 +32,16 @@ Embeddings can encode sensitive attributes implicitly (e.g., health, identity co
 ### Threat model notes (non-exhaustive)
 
 - **Inference attacks**: Even if explicit PII is absent, human-state signals can be sensitive and linkable.
-- **Cross-system correlation**: `producer.instance_id` and stable `meta` fields can become correlators. Producers SHOULD rotate identifiers when feasible.
+- **Cross-system correlation**: `producer.instance_id` and stable `meta` fields can become correlators.
+
+### `producer.instance_id` rotation
+
+`producer.instance_id` is a UUID and SHOULD be rotated to limit cross-session linkability:
+
+- **Per session**: RECOMMENDED default. Rotate `instance_id` at the start of each logical user session or when the producer process restarts.
+- **Per deployment**: acceptable when session boundaries are undefined; rotate on each deployment/version upgrade of the producer.
+- **Long-lived**: only when required by consumer contracts (e.g., longitudinal research consented explicitly by the subject). Producers operating in long-lived mode SHOULD document the cadence and purpose in `privacy.notes`.
+
+Producers MUST NOT reuse `instance_id` values across different physical users or devices.
 
 

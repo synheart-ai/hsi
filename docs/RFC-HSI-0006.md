@@ -23,6 +23,8 @@ Add:
 
 No other breaking changes are introduced. Existing payloads remain valid.
 
+> **Note:** The optional **emotion** head and refined per-reading `inference_mode` vocabulary are defined in **HSI 1.2** ([RFC-HSI-0007](./RFC-HSI-0007.md)), not in 1.1.
+
 ## 3. Normative Definition: Context Axes
 
 Context axes are numeric qualifiers describing runtime conditions used to interpret other axes.

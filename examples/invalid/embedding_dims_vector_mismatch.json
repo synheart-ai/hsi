@@ -1,5 +1,5 @@
 {
-  "hsi_version": "1.1",
+  "hsi_version": "1.2",
   "observed_at_utc": "2025-12-28T00:02:00Z",
   "computed_at_utc": "2025-12-28T00:02:00Z",
   "producer": {
@@ -11,19 +11,18 @@
     "w1": {
       "start_utc": "2025-12-28T00:01:50Z",
       "end_utc": "2025-12-28T00:02:00Z",
-      "label": "10s_window",
-      "aggregation": "instant"
+      "label": "10s_window"
     }
   },
   "axes": {
     "behavior": [
       {
         "name": "attention",
-        "value": 0.73,
+        "score": 0.73,
         "confidence": 0.58,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic",
-        "model_id": "synheart-attention-v1",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://attention_v1",
         "window_ids": ["w1"],
         "evidence_source_ids": []
       }
@@ -31,31 +30,28 @@
   },
   "embeddings": [
     {
-      "window_ids": ["w1"],
-      "dims": 8,
-      "space": "example-embed-1",
+      "window_id": "w1",
+      "dimension": 8,
       "encoding": "float32",
+      "confidence": 0.52,
       "vector": [0.12, -0.03, 0.44, 0.09],
-      "vector_hash": "sha256:a1b2c3d4e5f6"
+      "vector_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "model": "example.invalid/model/example-embed-1"
     }
   ],
   "privacy": {
     "contains_pii": false,
-    "consent": {
-      "level": "explicit",
-      "embedding": true,
-      "raw_biosignals": true,
-      "derived_metrics": true
-    },
+    "raw_biosignals_allowed": true,
+    "derived_metrics_allowed": true,
+    "embedding_allowed": true,
+    "consent": "explicit",
     "purposes": ["research"]
   },
   "meta": {
-    "intent": "Invalid example: embedding.dims does not equal len(embedding.vector).",
+    "intent": "Invalid example: embedding.dimension does not equal len(embedding.vector).",
     "provenance": {
       "baseline_status": "READY",
-      "providers": [
-        { "id": "synheart-focus", "version": "2.1.0" }
-      ],
+      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }],
       "engine": "synheart-flux",
       "engine_version": "1.0.0"
     }
