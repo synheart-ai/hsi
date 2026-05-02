@@ -90,7 +90,6 @@ Every axis reading is an object with the following **required** fields:
 
 Optional:
 
-- `source_tier` (integer in `1..=4`): signal-fidelity tier of the evidence backing this reading; see §6.7.
 - `notes` (string; MUST NOT include PII).
 
 Axes with inherently categorical outputs MUST NOT be represented as axis readings.
@@ -129,7 +128,7 @@ Consumers MUST NOT assume a closed set of axis *names*; unknown names within a k
 
 ### 6.7 Source fidelity tiers
 
-Readings and embeddings MAY carry an optional `source_tier` (integer `1..=4`) describing the fidelity of the evidence signals that informed them. Higher tier numbers indicate lower signal fidelity.
+`source_tier` is an integer in `1..=4` describing the fidelity of an evidence channel. Higher tier numbers indicate lower signal fidelity.
 
 | Tier | Evidence class | Typical examples |
 |---|---|---|
@@ -138,11 +137,11 @@ Readings and embeddings MAY carry an optional `source_tier` (integer `1..=4`) de
 | 3 | Proxy time-series | Coarse-rate heart-rate traces, motion proxies — trend-level information only |
 | 4 | Snapshot / minimal | Single spot values or low-resolution checks — coarse signals only |
 
-Producers SHOULD set `source_tier` to the **most conservative** (highest-numbered) tier among the inputs that materially contributed to the reading. Consumers SHOULD use `source_tier` to cap downstream trust: for example, probabilistic models may refuse to run when `source_tier >= 3`, and confidence ceilings MAY decrease monotonically with tier. `source_tier` is orthogonal to `confidence`: confidence measures the producer's certainty; `source_tier` measures the fidelity of the inputs the producer worked with.
+`source_tier` is declared **on the source** in `meta.provenance.sources` (§7). It is not carried on individual readings or embeddings; consumers derive a reading-level or embedding-level tier by resolving each entry in `evidence_source_ids` to its source descriptor and taking the **most conservative** (highest-numbered) `source_tier` across the cited sources. Sources that do not declare `source_tier` contribute "unknown" and SHOULD NOT lower the resolved tier.
 
-Embeddings carry `source_tier` under the same semantics, set to the tier of the worst contributing source in the window.
+Producers SHOULD declare `source_tier` on every hardware-bearing source. Consumers SHOULD use the resolved tier to cap downstream trust: probabilistic models MAY refuse to run when the resolved tier is `>= 3`, and confidence ceilings MAY decrease monotonically with tier. `source_tier` is orthogonal to `confidence`: confidence measures the producer's certainty in a reading; `source_tier` measures the fidelity of the input channel.
 
-`source_tier` MAY also be declared on the source itself in `meta.provenance.sources` (see §7). When present at the source level it is the **authoritative** tier for that channel, inherited by every reading or embedding that cites the source via `evidence_source_ids`. A reading or embedding MAY set its own `source_tier` to *override* the inherited value — typically to demote (cite a higher-numbered tier than the source declares) when only a degraded subset of the channel's signals materially contributed. Producers SHOULD NOT use a per-reading override to *promote* (cite a lower-numbered tier than the source declares); consumers MAY ignore such promotions. Resolution precedence for any single reading or embedding is therefore: per-reading / per-embedding `source_tier` (if set) → otherwise the worst-numbered tier among the cited sources' `source_tier` values → otherwise unknown.
+Producers that need to express "this reading materially used a *degraded subset* of an otherwise higher-fidelity source" SHOULD model the degraded path as a separate source entry (with its own `source_tier` and `degraded: true`) rather than overriding tier on the reading itself. This keeps tier resolution deterministic and observable from `meta.provenance` alone.
 
 ## 7. Sources and provenance
 
@@ -176,9 +175,7 @@ If both `vector` and `dimension` are present, `dimension` MUST equal `len(vector
 
 `vector_hash`, when present, MUST match `^sha256:[0-9a-f]{64}$`. Producers SHOULD compute the hash over a canonical encoding of the embedding content; **RFC 8785 (JSON Canonicalization Scheme)** is RECOMMENDED for canonicalizing the vector array before hashing. If `vector_hash` is present without `vector`, consumers MUST NOT assume the vector is available in the payload.
 
-Embeddings MAY also carry an optional `source_tier` (integer `1..=4`) with the semantics defined in §6.7.
-
-Embeddings MAY also carry an optional `evidence_source_ids` (array of strings, `uniqueItems: true`) declaring which sources backed the embedding. Entries SHOULD reference keys in `meta.provenance.sources`; HSI-VALIDATE-STRICT enforces reference integrity when the array is non-empty (§10). The semantics mirror `axis_reading.evidence_source_ids` (§6.2): consumers that care about signal fidelity resolve each id to its source descriptor for `type` / `quality` / `source_tier` / `degraded`.
+Embeddings MAY carry an optional `evidence_source_ids` (array of strings, `uniqueItems: true`) declaring which sources backed the embedding. Entries SHOULD reference keys in `meta.provenance.sources`; HSI-VALIDATE-STRICT enforces reference integrity when the array is non-empty (§10). The semantics mirror `axis_reading.evidence_source_ids` (§6.2): consumers resolve each id to its source descriptor for `type` / `quality` / `source_tier` / `degraded`. Embeddings do not carry their own `source_tier`; the tier is derived from the cited sources per §6.7.
 
 Embeddings MAY leak sensitive information (see `SECURITY.md`). Producers SHOULD treat embeddings as sensitive and restrict their distribution.
 
