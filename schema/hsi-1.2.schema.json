@@ -158,10 +158,9 @@
           "uniqueItems": true,
           "items": { 
             "$ref": "#/$defs/id",
-            "$comment": "entries SHOULD reference keys in meta.provenance.sources."
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Resolve signal fidelity via each source's source_tier in meta.provenance.sources."
           }
         },
-        "source_tier": { "$ref": "#/$defs/source_tier" },
         "notes": { "type": "string" }
       }
     },
@@ -197,7 +196,7 @@
         "degraded": { "type": "boolean" },
         "source_tier": {
           "$ref": "#/$defs/source_tier",
-          "$comment": "Signal-fidelity tier declared at the source itself so every reading or embedding that cites this source inherits a single authoritative tier. Per-reading and per-embedding source_tier remain valid for consumers that need to override or scope the tier to a specific derivation."
+          "$comment": "Signal-fidelity tier for this source. Axis readings and embeddings resolve fidelity via evidence_source_ids → meta.provenance.sources.*.source_tier."
         },
         "device_class": {
           "type": "string",
@@ -257,7 +256,7 @@
           "minProperties": 1,
           "propertyNames": { "$ref": "#/$defs/id" },
           "additionalProperties": { "$ref": "#/$defs/source" },
-          "$comment": "Map keys are the authoritative source IDs. evidence_source_ids on axis_reading SHOULD reference these keys."
+          "$comment": "Map keys are the authoritative source IDs. evidence_source_ids on axis_reading and embeddings SHOULD reference these keys."
         },
         "baseline_status": { "type": "string" },
         "providers": {
@@ -318,7 +317,6 @@
         },
         "confidence": { "$ref": "#/$defs/score01" },
         "model": { "type": "string" },
-        "source_tier": { "$ref": "#/$defs/source_tier" },
         "evidence_source_ids": {
           "type": "array",
           "uniqueItems": true,
@@ -326,7 +324,7 @@
             "$ref": "#/$defs/id",
             "$comment": "entries SHOULD reference keys in meta.provenance.sources."
           },
-          "$comment": "Mirrors axis_reading.evidence_source_ids so producers can declare which sources backed this embedding. Consumers that care about signal fidelity can resolve each id against meta.provenance.sources for type/quality/source_tier."
+          "$comment": "Mirrors axis_reading.evidence_source_ids so producers can declare which sources backed this embedding. Consumers resolve each id against meta.provenance.sources for type/quality/source_tier."
         }
       },
       "allOf": [
