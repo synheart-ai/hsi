@@ -25,7 +25,6 @@
         "model_id": "model://example/stress-degraded-v1",
         "window_ids": ["w1"],
         "evidence_source_ids": ["s_sensor_a", "s_sensor_b"],
-        "source_tier": 3,
         "notes": "Stress estimated with degraded inputs."
       }
     ]
@@ -45,12 +44,14 @@
           "type": "sensor",
           "quality": 0.22,
           "degraded": true,
+          "source_tier": 3,
           "notes": "Degraded source: low quality."
         },
         "s_sensor_b": {
           "type": "sensor",
           "quality": 0.49,
           "degraded": true,
+          "source_tier": 3,
           "notes": "Degraded source: intermittent availability."
         }
       },
