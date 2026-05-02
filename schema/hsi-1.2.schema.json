@@ -78,7 +78,7 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 4,
-      "$comment": "Signal-fidelity tier of the evidence backing a reading or embedding. 1 = ground-truth (e.g. beat-to-beat intervals, raw sensor stream), 2 = vendor-derived high-fidelity features, 3 = proxy time-series (trend-level only), 4 = snapshot/minimal signal. Higher tier numbers SHOULD correspond to reduced downstream trust. See RFC-HSI-0008 §6.7."
+      "$comment": "Signal-fidelity tier declared on a source in meta.provenance.sources. 1 = ground-truth (e.g. beat-to-beat intervals, raw sensor stream), 2 = vendor-derived high-fidelity features, 3 = proxy time-series (trend-level only), 4 = snapshot/minimal signal. Higher tier numbers SHOULD correspond to reduced downstream trust. Readings and embeddings do not carry their own source_tier; consumers derive a reading- or embedding-level tier by resolving evidence_source_ids against meta.provenance.sources and taking the most conservative (highest-numbered) tier among cited sources. See RFC-HSI-0008 §6.7."
     },
 
     "producer": {
