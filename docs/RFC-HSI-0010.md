@@ -16,7 +16,7 @@
 HSI 1.0–1.2 defines axis domains (`physiological`, `behavior`, `engagement`, `context`, `emotion`) that grew from operational need rather than a coherent model of what the axes describe. As HSI is consumed by a wider set of producers and consumers — wearables, mobile apps, desktop and web clients, behavioral analytics, affective computing — three problems have surfaced:
 
 1. **Domain overlap and ambiguity.** `behavior` mixes body movement (kinematic) with device interaction (OS events). `engagement` mixes attentional state (cognitive) with interaction pattern (digital). Producers cannot consistently choose where a reading belongs; consumers cannot reliably interpret across producers.
-2. **Missing modality attribution.** A reading carries `evidence_source_ids` and `source_tier`, but consumers cannot tell which *channels of observation* (biosensor, motion, OS events, fusion) the producer relied on to compute it. This matters because the same axis name (e.g. `focus`) can be inferred from very different evidence: a wearable producer infers it from HRV; a desktop-only producer infers it from interaction rhythm. Consumers need to know which.
+2. **Missing modality attribution.** A reading carries `evidence_source_ids` referencing source descriptors that themselves declare a `source_tier`, but consumers cannot tell which *channels of observation* (biosensor, motion, OS events, fusion) the producer relied on to compute it. This matters because the same axis name (e.g. `focus`) can be inferred from very different evidence: a wearable producer infers it from HRV; a desktop-only producer infers it from interaction rhythm. Consumers need to know which.
 3. **No standard for categorical axes.** Activity class, postural class, and locomotion class are not points on a `[0, 1]` scale. The current `axis_reading` shape forces producers to encode them as `score`, breaking the semantic of the field, or to omit them entirely.
 
 HSI 1.3 reorganizes axes around **what kind of human-state dimension is being described** and **which modality of observation produced it**. Five canonical axis domains and four canonical modalities are introduced as the v1 vocabulary. Per-reading modality attribution is required. The `direction` enum is extended to include `categorical`, and a categorical reading shape is defined.
@@ -245,7 +245,7 @@ HSI 1.3 reorganizes the axis domain set. Producers migrating from 1.2 follow thi
 3. Convert categorical kinematic readings to the §8 shape (`label`, `categories`, `score: null`, `direction: "categorical"`).
 4. Rename `higher_is_less` → `lower_is_more`.
 5. Move 1.2 `context` axes into `meta.provenance` or `kinematic` as applicable (§11.5).
-6. Replace `source_tier` with `tiers` per RFC-HSI-0011 §10.
+6. Rename `source.source_tier: N` to `source.tiers: { "physiological": N }` on every entry in `meta.provenance.sources` per RFC-HSI-0011 §10, and optionally enrich with `tiers.kinematic` / `tiers.digital` where the source has those signals.
 7. Set `hsi_version: "1.3"`.
 
 Producers MAY emit 1.2 and 1.3 in parallel during a transition period; consumers MUST validate each payload against the schema matching its declared `hsi_version`.
@@ -348,16 +348,18 @@ The 1.2 properties `engagement`, `behavior`, `context`, `emotion` are removed.
 ### 13.4 Carry-overs
 
 - `axes_domain` shape unchanged.
-- `source` descriptor unchanged in shape (PR #5's `device_class`, `signals`, `transport`, `vendor` retained). The 1.2 `source.source_tier` field is **removed** in 1.3 and replaced by `source.tiers` per RFC-HSI-0011.
-- `provenance` shape unchanged. `axis_reading.source_tier` and `embedding.source_tier` are likewise removed and replaced by `tiers` per RFC-HSI-0011.
+- `source` descriptor unchanged in shape (PR #5's `device_class`, `signals`, `transport`, `vendor` retained). The 1.2 `source.source_tier` field is **removed** in 1.3 and replaced by `source.tiers` per RFC-HSI-0011. `source_tier` does not appear at any other site in 1.2 (post-PR #5) and so has nothing else to remove in 1.3.
+- `provenance` shape unchanged. Tier resolution for readings and embeddings is consumer-side, via `evidence_source_ids` against `meta.provenance.sources[*].tiers` (RFC-HSI-0011 §6.3); no `tiers` field is added to `axis_reading` or `embedding`.
 - `embedding` shape unchanged.
 - All temporal, privacy, and producer fields unchanged.
 
 ## 14. Examples
 
-Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3 reading shape end-to-end. Both RFCs together define the canonical 1.3 axis_reading.
+Examples place `tiers` on the cited sources per RFC-HSI-0011 §6.2 (source-only); the reading's effective per-modality tier is resolved by the consumer via `evidence_source_ids` per §6.3. Each example shows the reading and the relevant source descriptors together so the resolution is observable.
 
 ### 14.1 Multimodal cognitive axis (lives under `axes.cognitive[]`)
+
+Reading:
 
 ```json
 {
@@ -366,10 +368,6 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
   "confidence": 0.82,
   "direction": "higher_is_more",
   "modalities_used": ["physiological", "digital"],
-  "tiers": {
-    "physiological": 2,
-    "digital": 1
-  },
   "inference_mode": "composite",
   "model_id": "rulepack://focus_v1",
   "window_ids": ["w-2026-05-01-0900-60s"],
@@ -377,7 +375,20 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
 }
 ```
 
+Cited sources in `meta.provenance.sources`:
+
+```json
+{
+  "watch-ble-1":     { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "physiological": 2 } },
+  "phone-os-events": { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "digital": 1 } }
+}
+```
+
+Resolved per-modality tiers for the reading: `{ physiological: 2, digital: 1 }`.
+
 ### 14.2 Categorical kinematic axis (lives under `axes.kinematic[]`)
+
+Reading:
 
 ```json
 {
@@ -387,7 +398,6 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
   "categories": ["sedentary", "standing", "walking", "running", "cycling", "vigorous"],
   "confidence": 0.78,
   "direction": "categorical",
-  "tiers": { "kinematic": 1 },
   "inference_mode": "deterministic_rule",
   "model_id": "rulepack://activity_state_v1",
   "window_ids": ["w-2026-05-01-0900-60s"],
@@ -395,7 +405,19 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
 }
 ```
 
+Cited source:
+
+```json
+{
+  "watch-accel": { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "kinematic": 1 } }
+}
+```
+
+Resolved per-modality tiers: `{ kinematic: 1 }`.
+
 ### 14.3 Digital-only axis, browser/desktop producer with no biosensor or motion (lives under `axes.digital[]`)
+
+Reading:
 
 ```json
 {
@@ -403,7 +425,6 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
   "score": 0.62,
   "confidence": 0.55,
   "direction": "higher_is_more",
-  "tiers": { "digital": 1 },
   "inference_mode": "deterministic_rule",
   "model_id": "rulepack://focus_quality_v1",
   "window_ids": ["w-2026-05-01-1430-300s"],
@@ -411,7 +432,17 @@ Examples populate the `tiers` field defined by RFC-HSI-0011 to show the full 1.3
 }
 ```
 
-Note in all three: there is no `modality` field. The reading's modality is encoded by which `axes.<domain>` array it appears in (§5.2). Cognitive/affective readings carry `modalities_used`; the three single-modality readings above do not.
+Cited source:
+
+```json
+{
+  "desktop-os-events": { "type": "sensor", "quality": 0.85, "degraded": false, "tiers": { "digital": 1 } }
+}
+```
+
+Resolved per-modality tiers: `{ digital: 1 }`. `tiers.physiological` is absent across cited sources — consumers MUST treat that as "no signal," not as Tier 4.
+
+Note in all three: readings do not carry a `tiers` field; they do not carry a `modality` field either. The reading's modality is encoded by which `axes.<domain>` array it appears in (§5.2). Cognitive/affective readings carry `modalities_used`; the three single-modality readings above do not.
 
 ## 15. Privacy considerations
 

@@ -13,7 +13,7 @@
 
 ## 1. Purpose
 
-HSI 1.2 (RFC-HSI-0008 §6.7) defines a single integer field, `source_tier` (1–4), to describe the fidelity of evidence backing a reading or embedding. Despite the generic name, the four tiers and the table that documents them are **physiology-specific**: they describe a degradation ladder from native RR intervals (Tier 1) to a single HR snapshot (Tier 4). The field cannot honestly describe the fidelity of a kinematic or digital-interaction signal, and it implicitly forces those modalities to share one ladder with physiology even though they are independent observation channels.
+HSI 1.2 (RFC-HSI-0008 §6.7, post-PR #5) defines a single integer field, `source_tier` (1–4), declared on each entry in `meta.provenance.sources`. Readings and embeddings inherit an effective tier by resolving `evidence_source_ids` against the source map. Despite the generic name, the four tiers and the table that documents them are **physiology-specific**: they describe a degradation ladder from native RR intervals (Tier 1) to a single HR snapshot (Tier 4). The field cannot honestly describe the fidelity of a kinematic or digital-interaction signal, and it implicitly forces those modalities to share one ladder with physiology even though they are independent observation channels.
 
 RFC-HSI-0010 makes the modality structure explicit (`physiological`, `kinematic`, `digital`, `multimodal`). This RFC follows that structure into the fidelity-tier model. HSI 1.3 introduces a **`tiers` object** carrying one optional fidelity tier per observable modality:
 
@@ -25,7 +25,7 @@ RFC-HSI-0010 makes the modality structure explicit (`physiological`, `kinematic`
 }
 ```
 
-In HSI 1.3, `tiers` **replaces** `source_tier`. The 1.3 schema does not accept `source_tier` at any of the three sites it appeared in 1.2 (`axis_reading`, `embedding`, `meta.provenance.sources[*]`); 1.3 producers MUST emit `tiers` instead. This is a breaking change permitted under HSI's pre-stable regime (`versioning.md`). 1.2 payloads continue to validate against `schema/hsi-1.2.schema.json` unchanged.
+In HSI 1.3, `tiers` **replaces** `source_tier`. The 1.3 schema does not accept `source_tier` at the only site it appeared in 1.2 — `meta.provenance.sources[*]` (per-reading and per-embedding placements were already retired in PR #5 against 1.2). 1.3 schemas additionally reject `source_tier` defensively at the historical reading and embedding sites via `additionalProperties: false`. 1.3 producers MUST emit `tiers` instead. This is a breaking change permitted under HSI's pre-stable regime (`versioning.md`). 1.2 payloads continue to validate against `schema/hsi-1.2.schema.json` unchanged.
 
 The motivating consumer cases:
 
@@ -38,12 +38,12 @@ The motivating consumer cases:
 - **Modality definition.** RFC-HSI-0010 §6 defines the four canonical modalities. This RFC takes that set as given.
 - **Axis-domain redesign.** RFC-HSI-0010 §4 defines the 5-axis canonical domain set. This RFC takes that set as given.
 - **Calibration of confidence priors.** Per-modality confidence caps in §5 are starting priors derived from product judgment, not from validation against a labeled dataset. Producers and consumers SHOULD treat the numeric caps as initial recommendations subject to revision once a calibration study is published. The cap *structure* (per-modality, monotonically decreasing with tier) is normative; the *exact values* are open until calibration.
-- **Per-source vs per-reading semantics.** `tiers` follows the placement and resolution rules from RFC-HSI-0008 §6.7 (authoritative at source, overridable per reading). This RFC restates them in §6.3 for completeness but does not change them.
+- **Per-reading or per-embedding tier overrides.** `tiers` lives only on `meta.provenance.sources[*]`, mirroring HSI 1.2's source-only `source_tier` placement (RFC-HSI-0008 §6.7). Readings and embeddings derive an effective per-modality tier by resolving `evidence_source_ids` against the source map. The 1.2 design discussion that retired the per-reading override path applies unchanged in 1.3: one home, deterministic resolution, no producer footgun. Producers that need to express a degraded subset of an otherwise higher-fidelity channel SHOULD model the degraded path as a separate source entry with its own `tiers` (and `degraded: true`) rather than overriding tier on the reading.
 
 ## 3. Relation to prior RFCs
 
-- **RFC-HSI-0008** §6.7 defines `source_tier` (integer 1–4) on `axis_reading`, `embedding`, and (post-PR #5) `meta.provenance.sources[*]`. In HSI 1.3 this RFC removes `source_tier` from those three sites and replaces it with `tiers`. The 1.2 tier table (§6.7) is preserved as the definition of `tiers.physiological`.
-- **RFC-HSI-0010** introduces `modality` and `modalities_used` on every axis_reading. The keys of `tiers` correspond exactly to RFC-HSI-0010's three observable modalities (`physiological`, `kinematic`, `digital`); the fourth modality `multimodal` is a fusion outcome and has no tier of its own.
+- **RFC-HSI-0008** §6.7 (post-PR #5) defines `source_tier` (integer 1–4) only on `meta.provenance.sources[*]`. The 1.2 per-reading and per-embedding sites were retired in PR #5 in favor of source-only placement with consumer-side resolution via `evidence_source_ids`. HSI 1.3 carries that same source-only placement forward and renames the field from a scalar `source_tier` to a per-modality `tiers` object. The 1.2 physiological tier table (§6.7) is preserved as the definition of `tiers.physiological`.
+- **RFC-HSI-0010** introduces `modalities_used` on multimodal axis_readings (§5.1). The keys of `tiers` correspond exactly to RFC-HSI-0010's three observable modalities (`physiological`, `kinematic`, `digital`); the fourth modality `multimodal` is a fusion outcome and has no tier of its own.
 - **RFC-HSI-0009** is independent. Both this RFC and RFC-HSI-0009 land in `schema/hsi-1.3.schema.json`.
 
 ## 4. Per-modality fidelity ladders
@@ -119,38 +119,39 @@ The caps replace the implicit "Tier ≥ 3 forbids probabilistic models" heuristi
 
 ### 6.2 Where it lives
 
-`tiers` is permitted at the same three sites as `source_tier`:
+`tiers` lives **only** on `meta.provenance.sources[*]`. It is the authoritative per-modality fidelity declaration for that source. Readings and embeddings do not carry their own `tiers` field; consumers derive the effective per-modality tier by resolving `evidence_source_ids` against the source map (§6.3).
 
-- **`meta.provenance.sources[*].tiers`** — authoritative tier set for the source. Inherited by readings and embeddings that cite the source via `evidence_source_ids`. Exactly one tier key SHOULD be populated per source unless the source genuinely produces multiple modalities (rare but valid: a phone that emits both `kinematic` and `digital`).
-- **`axis_reading.tiers`** — per-reading override or declaration. Required semantics match `source_tier` (RFC-HSI-0008 §6.7): the per-reading value overrides inherited source-level tiers when present; producers SHOULD use overrides only to *demote* (cite a higher-numbered tier than the source declares), not to promote.
-- **`embedding.tiers`** — per-embedding tier set. Mirrors `axis_reading.tiers` semantics.
+Exactly one tier key SHOULD be populated per source unless the source genuinely produces multiple modalities (rare but valid: a phone that emits both `kinematic` and `digital`). Schema-level constraints: `additionalProperties: false`, `minProperties: 1` (an empty `tiers` object MUST NOT be emitted; producers either populate at least one tier key or omit `tiers` entirely).
 
 ### 6.3 Resolution precedence
 
 For a single reading or embedding, the effective per-modality tier is:
 
-1. Per-reading / per-embedding `tiers.<modality>` if set.
-2. Otherwise, the worst-numbered (highest-integer) value among `tiers.<modality>` declared on cited sources via `evidence_source_ids`.
-3. Otherwise, unknown.
+1. The worst-numbered (highest-integer) value among `tiers.<modality>` declared on cited sources via `evidence_source_ids`, if any cited source declares that modality.
+2. Otherwise, unknown.
 
-The "worst-numbered wins" rule mirrors RFC-HSI-0008 §6.7 and is conservative: when multiple sources of the same modality contribute, the reading inherits the most-degraded fidelity.
+The "worst-numbered wins" rule mirrors RFC-HSI-0008 §6.7 and is conservative: when multiple sources of the same modality contribute, the reading inherits the most-degraded fidelity. Sources that omit `tiers.<modality>` contribute "unknown" for that modality and SHOULD NOT lower the resolved tier (i.e. the resolution iterates only over sources that declare the modality).
+
+Producers that need to attribute "this reading materially used a *degraded subset* of an otherwise higher-fidelity channel" SHOULD model the degraded path as a separate source entry (with its own `tiers` and `degraded: true`) rather than overriding tiers on the reading. This keeps tier resolution deterministic and observable from `meta.provenance` alone, matching the RFC-HSI-0008 §6.7 (post-PR #5) policy.
 
 ## 7. Replacement of `source_tier`
 
-In HSI 1.3, `source_tier` is removed at all three sites it appeared in 1.2 (`axis_reading`, `embedding`, `meta.provenance.sources[*]`). 1.3 schemas reject the field via `additionalProperties: false`. Producers MUST emit `tiers` instead.
+In HSI 1.3, `source_tier` is removed at the only site it appeared in 1.2 — `meta.provenance.sources[*]` (per-reading and per-embedding placements were retired in PR #5 against 1.2). 1.3 schemas reject `source_tier` via `additionalProperties: false`. Producers MUST emit `tiers` instead.
 
 This is a clean break, not a deprecation. HSI is pre-stable (`versioning.md`); minor versions MAY introduce breaking contract changes until 2.0. Sustaining a dual-emit window across `source_tier` and `tiers` would require validator-enforced cross-field consistency rules and lasting producer/consumer ambiguity for no compensating benefit, given that producers and consumers already coordinate per `hsi_version` (RFC-HSI-0008 §12).
 
 ### 7.1 Producer obligations
 
-- 1.3 producers MUST emit `tiers` wherever they previously emitted `source_tier`. The 1.2 → 1.3 mapping is `source_tier: N` → `tiers: { "physiological": N }`.
-- Producers SHOULD additionally populate `tiers.kinematic` and `tiers.digital` from their modality availability. Omit modality keys for which there is no signal.
-- 1.3 producers MUST NOT emit `source_tier`. The schema rejects it.
+- 1.3 producers MUST replace every `source.source_tier: N` with `source.tiers: { "physiological": N }` on the same source descriptor. This is the canonical 1.2 → 1.3 rename.
+- Producers SHOULD additionally populate `tiers.kinematic` and `tiers.digital` on sources whose `signals` (RFC-HSI-0008 §7) include kinematic or digital channels. Omit modality keys for which the source has no signal.
+- 1.3 producers MUST NOT emit `source_tier` anywhere. The schema rejects it.
+- 1.3 producers MUST NOT emit `tiers` on `axis_reading` or `embedding`. The schema rejects it (§8.2). Producers expressing a degraded subset of a higher-fidelity channel SHOULD declare a separate source entry with its own `tiers` (§6.3, §2 non-goals).
 
 ### 7.2 Consumer obligations
 
-- 1.3 consumers read `tiers`. `source_tier` does not appear in 1.3 payloads; consumers SHOULD NOT look for it.
-- Consumers that ingest both 1.2 and 1.3 traffic dispatch on `hsi_version` (RFC-HSI-0008 §12) and validate against the schema for the declared version. The 1.2 path continues to read `source_tier`; the 1.3 path reads `tiers`.
+- 1.3 consumers read `tiers` from `meta.provenance.sources[*]` and resolve the effective per-modality tier for any reading or embedding via `evidence_source_ids` (§6.3).
+- `source_tier` does not appear in 1.3 payloads at any site; consumers SHOULD NOT look for it. `tiers` does not appear on `axis_reading` or `embedding`; consumers SHOULD NOT look for it there either.
+- Consumers that ingest both 1.2 and 1.3 traffic dispatch on `hsi_version` (RFC-HSI-0008 §12) and validate against the schema for the declared version. Both 1.2 (post-PR #5) and 1.3 use the source-only placement; the only on-the-wire difference is the rename `source.source_tier: N` ↔ `source.tiers: { "physiological": N }`.
 
 ## 8. Schema additions
 
@@ -189,52 +190,51 @@ This section enumerates the concrete `schema/hsi-1.3.schema.json` changes for th
 }
 ```
 
-The 1.2 `$defs/source_tier` definition is **removed** in 1.3. References to it from `axis_reading`, `embedding`, and `meta.provenance.sources[*]` are removed at the same time.
+The 1.2 `$defs/source_tier` definition is **removed** in 1.3. The single 1.2 reference to it (from `meta.provenance.sources[*]`) is removed at the same time.
 
 ### 8.2 Field additions
 
-Added at three sites — identical shape, identical semantics:
+Added at one site — `meta.provenance.sources[*]`:
 
-- `axis_reading.tiers` (optional): `{ "$ref": "#/$defs/tiers" }`.
-- `embedding.tiers` (optional): `{ "$ref": "#/$defs/tiers" }`.
 - `meta.provenance.sources[*].tiers` (optional): `{ "$ref": "#/$defs/tiers" }`.
+
+`axis_reading` and `embedding` do not gain a `tiers` property. `axis_reading.additionalProperties: false` and `embedding.additionalProperties: false` already reject any `tiers` field at those sites; no further schema change is needed there.
 
 ### 8.3 Field removals
 
-Removed at the same three sites:
+Removed:
 
-- `axis_reading.source_tier`
-- `embedding.source_tier`
 - `meta.provenance.sources[*].source_tier`
+- `$defs/source_tier` (the type definition itself, since no site references it any longer).
 
-The 1.3 schema's `additionalProperties: false` on each container rejects payloads that include `source_tier`. The 1.2 schema (`schema/hsi-1.2.schema.json`) is unchanged; 1.2 payloads continue to validate against it.
+The 1.3 schema's `additionalProperties: false` on each container rejects payloads that include `source_tier` at any of the historical placements (`axis_reading`, `embedding`, source). The 1.2 schema (`schema/hsi-1.2.schema.json`) is unchanged; 1.2 payloads continue to validate against it.
 
 ## 9. Compliance
 
-- **HSI-VALIDATE-BASIC**: validates `tiers` object structure, key set, and value ranges per `schema/hsi-1.3.schema.json`. Rejects `source_tier` at any of the three former sites.
+- **HSI-VALIDATE-BASIC**: validates `tiers` object structure, key set, and value ranges per `schema/hsi-1.3.schema.json`. Rejects `source_tier` at any historical site (`axis_reading`, `embedding`, source). Rejects `tiers` on `axis_reading` and `embedding` (via their existing `additionalProperties: false`).
 - **HSI-VALIDATE-STRICT**: BASIC plus the following checks in `tests/hsi_validate.py::_validate_strict_13`:
   - All RFC-HSI-0008 §10 STRICT checks remain (those that do not depend on `source_tier`).
   - All RFC-HSI-0010 §12 STRICT checks remain.
-  - **`tiers` non-empty**: when the field is present, it MUST contain ≥1 populated key. (`minProperties: 1` in §8.1 enforces this at BASIC; STRICT re-checks for defense in depth.)
-  - **Tier-domain consistency** (informational warning, not failure): when an axis_reading appears in one of the three single-modality domains (`axes.physiological[]`, `axes.kinematic[]`, `axes.digital[]`) and `tiers` is present, `tiers.<domain>` SHOULD also be present. Producers emitting a single-modality reading without a tier for that modality lose the ability to express fidelity; STRICT emits a warning (HSI-1.3-TIERS-MISSING-FOR-MODALITY) but does not reject. (Per RFC-HSI-0010 §5.2, modality on single-modality readings is encoded by the axis domain key, not by a separate `modality` field.)
+  - **`tiers` non-empty**: when the field is present on a source, it MUST contain ≥1 populated key. (`minProperties: 1` in §8.1 enforces this at BASIC; STRICT re-checks for defense in depth.)
+  - **Resolved tier missing for single-modality readings** (informational warning, not failure): when an axis_reading appears in one of the three single-modality domains (`axes.physiological[]`, `axes.kinematic[]`, `axes.digital[]`), the resolved per-modality tier (computed from `evidence_source_ids` per §6.3) SHOULD be present for that domain's modality. Readings whose cited sources do not declare a tier for the domain modality lose the ability to express fidelity; STRICT emits a warning (`HSI-1.3-TIERS-MISSING-FOR-MODALITY`) but does not reject. Per RFC-HSI-0010 §5.2, modality on single-modality readings is encoded by the axis domain key, not by a separate `modality` field.
 
 ## 10. Migration from HSI 1.2
 
-The 1.2 → 1.3 migration is a single rename plus optional enrichment.
+The 1.2 → 1.3 migration is a single rename on `meta.provenance.sources[*]` plus optional enrichment. Per-reading and per-embedding migration is a no-op because 1.2 (post-PR #5) does not carry `source_tier` at those sites.
 
 Producers:
 
-1. **Rename** every `source_tier: N` (on a source, axis_reading, or embedding) to `tiers: { "physiological": N }` at the same site.
-2. **Enrich** by populating `tiers.kinematic` and `tiers.digital` per the producer's modality availability. Omit modality keys for which the producer has no signal.
+1. **Rename** every `source.source_tier: N` to `source.tiers: { "physiological": N }` on the same source descriptor inside `meta.provenance.sources`.
+2. **Enrich** by populating `tiers.kinematic` and/or `tiers.digital` on sources whose `signals` (RFC-HSI-0008 §7) include those channels. Omit modality keys for which the source has no signal.
 3. **Set** `hsi_version: "1.3"`.
 
 Consumers:
 
-1. Read `tiers` from 1.3 payloads.
-2. Continue reading `source_tier` from 1.2 payloads validated against `schema/hsi-1.2.schema.json`.
-3. **Treat absence** of a modality key as "no signal," not as the highest-numbered tier. Specifically: a behavior-only producer omits `tiers.physiological`; consumers MUST NOT interpret that absence as "Tier 4 physiology."
+1. Read `tiers` from `meta.provenance.sources[*]` in 1.3 payloads. Resolve a reading's effective per-modality tier via `evidence_source_ids` per §6.3.
+2. Continue reading `source.source_tier` from 1.2 payloads validated against `schema/hsi-1.2.schema.json`. The same `evidence_source_ids` resolution applies on the 1.2 path.
+3. **Treat absence** of a modality key as "no signal," not as the highest-numbered tier. Specifically: a desktop-only producer omits `tiers.physiological` on its sources; consumers MUST NOT interpret that absence as "Tier 4 physiology."
 
-Producers and consumers SHOULD migrate together on a per-`hsi_version` basis (RFC-HSI-0008 §12). Producers that need to serve 1.2-only consumers continue to emit 1.2 payloads with `source_tier`; the 1.2 schema is unchanged.
+Producers and consumers SHOULD migrate together on a per-`hsi_version` basis (RFC-HSI-0008 §12). Producers that need to serve 1.2-only consumers continue to emit 1.2 payloads with `source.source_tier`; the 1.2 schema is unchanged.
 
 ## 11. Privacy considerations
 
@@ -248,7 +248,7 @@ Before promoting this RFC to Accepted:
 
 - **Confidence-cap calibration.** The values in §5 are starting priors. A validation study comparing behavior-only and kinematic-led inference against a physiological reference (HRV-derived focus, e.g. on N≥30 dual-record sessions) is needed to set defensible caps. Should this RFC ship with the priors marked normative, advisory, or omit the table entirely until calibration?
 - **Tier-direction polarity.** This RFC keeps the "lower number = higher fidelity" convention inherited from RFC-HSI-0008 §6.7 for continuity with the 1.2 tier table. An alternative ("higher number = higher fidelity," matching the intuitive "more is better" convention used in `score`) is more readable for new consumers. Lock in lower-is-better for 1.3, or invert?
-- **Multi-modality-per-source.** Some sources (a phone) genuinely produce multiple modalities. Current draft permits multiple `tiers.<modality>` keys on a single source descriptor. Alternative: require one tier key per source, forcing producers to declare separate logical sources for `phone-os-events` and `phone-accel`. Single-source-multi-tier is more compact; split-sources is cleaner attribution.
+- **Multi-modality-per-source.** Some sources (a phone) genuinely produce multiple modalities. Current draft permits multiple `tiers.<modality>` keys on a single source descriptor. Alternative: require one tier key per source, forcing producers to declare separate logical sources for `phone-os-events` and `phone-accel`. Single-source-multi-tier is more compact; split-sources is cleaner attribution and integrates better with the source-only resolution rule (§6.3).
 - **Per-modality cap policy.** §5 states the cap structure is normative and fusion policy is producer-defined. Should this RFC also normatively define a default fusion policy (e.g. "cap = max of contributing modality caps") to avoid silent producer drift?
 
 ## 13. Canonical schema
@@ -257,8 +257,8 @@ When this RFC is Accepted alongside RFC-HSI-0010, the changes in §8 are materia
 
 The schema PR also lands:
 
-- New valid examples: `examples/valid/tiers_multimodal.json` (axis_reading with all three tier keys populated and a multimodal cognitive reading), `examples/valid/tiers_digital_only.json` (digital-only producer, `tiers.physiological` absent).
-- New invalid examples: `examples/invalid/tiers_source_tier_present.json` (`source_tier` field present in a 1.3 payload), `examples/invalid/tiers_empty_object.json` (`tiers: {}`), `examples/invalid/tiers_unknown_modality.json` (`tiers.audio: 1`).
+- New valid examples: `examples/valid/tiers_multimodal.json` (sources with all three tier keys populated, plus a multimodal cognitive reading whose resolved tier is computed across them), `examples/valid/tiers_digital_only.json` (digital-only producer, source omits `tiers.physiological`).
+- New invalid examples: `examples/invalid/tiers_source_tier_present.json` (`source_tier` field present on a 1.3 source), `examples/invalid/tiers_on_axis_reading.json` (`tiers` set on an axis_reading rather than a source), `examples/invalid/tiers_empty_object.json` (`tiers: {}` on a source), `examples/invalid/tiers_unknown_modality.json` (`tiers.audio: 1` on a source).
 - Strict validator warning code `HSI-1.3-TIERS-MISSING-FOR-MODALITY` in `tests/hsi_validate.py::_validate_strict_13`.
 - CHANGELOG `[1.3]` entry covering this RFC together with RFC-HSI-0010 and RFC-HSI-0009.
 - README badge bump to 1.3 with links to RFC-HSI-0010 and RFC-HSI-0011.

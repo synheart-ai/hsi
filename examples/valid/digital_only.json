@@ -1,0 +1,60 @@
+{
+  "hsi_version": "1.3",
+  "observed_at_utc": "2026-05-01T14:35:00Z",
+  "computed_at_utc": "2026-05-01T14:35:00Z",
+  "producer": {
+    "name": "Browser Extension",
+    "version": "0.5.0"
+  },
+  "windows": {
+    "w_1430": {
+      "start_utc": "2026-05-01T14:30:00Z",
+      "end_utc": "2026-05-01T14:35:00Z",
+      "label": "realtime"
+    }
+  },
+  "axes": {
+    "digital": [
+      {
+        "name": "focus_quality",
+        "score": 0.62,
+        "confidence": 0.55,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://focus_quality_v1",
+        "window_ids": ["w_1430"],
+        "evidence_source_ids": ["desktop_os_events"]
+      },
+      {
+        "name": "interruption_pressure",
+        "score": 0.3,
+        "confidence": 0.55,
+        "direction": "lower_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://interruption_pressure_v1",
+        "window_ids": ["w_1430"],
+        "evidence_source_ids": ["desktop_os_events"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "provenance": {
+      "sources": {
+        "desktop_os_events": {
+          "type": "sensor",
+          "quality": 0.85,
+          "degraded": false,
+          "tiers": { "digital": 1 },
+          "device_class": "desktop",
+          "signals": ["touch"],
+          "transport": "inproc"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "hsi_version": "1.3",
+  "observed_at_utc": "2026-05-01T09:01:00Z",
+  "computed_at_utc": "2026-05-01T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.3.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-05-01T09:00:00Z",
+      "end_utc": "2026-05-01T09:01:00Z"
+    }
+  },
+  "axes": {
+    "affective": [
+      {
+        "name": "valence",
+        "score": 0.5,
+        "confidence": 0.4,
+        "direction": "bidirectional",
+        "modalities_used": ["digital"],
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://affective_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["s_phone"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "provenance": {
+      "sources": {
+        "s_phone": {
+          "type": "sensor",
+          "quality": 0.85,
+          "degraded": false,
+          "tiers": { "digital": 1 }
+        }
+      }
+    }
+  }
+}

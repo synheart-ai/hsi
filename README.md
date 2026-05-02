@@ -1,9 +1,11 @@
 ## Human State Interface (HSI)
 
-[![Version](https://img.shields.io/badge/version-1.2-blue.svg)](schema/hsi-1.2.schema.json)
+[![Version](https://img.shields.io/badge/version-1.3-blue.svg)](schema/hsi-1.3.schema.json)
 [![Schema](https://img.shields.io/badge/schema-JSON%20Draft%202020--12-green.svg)](https://json-schema.org/draft/2020-12/schema)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![RFC](https://img.shields.io/badge/RFC-HSI--0008-purple.svg)](docs/RFC-HSI-0008.md)
+[![RFC](https://img.shields.io/badge/RFC--HSI--0008-1.2_canonical-purple.svg)](docs/RFC-HSI-0008.md)
+[![RFC](https://img.shields.io/badge/RFC--HSI--0010-1.3_axes_modalities-purple.svg)](docs/RFC-HSI-0010.md)
+[![RFC](https://img.shields.io/badge/RFC--HSI--0011-1.3_tiers-purple.svg)](docs/RFC-HSI-0011.md)
 [![Specification](https://img.shields.io/badge/specification-contract--only-orange.svg)](#what-hsi-is)
 [![Whitepaper](https://img.shields.io/badge/whitepaper-read-brightgreen.svg)](docs/hsi-contract-whitepaper.pdf)
 

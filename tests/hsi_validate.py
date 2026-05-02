@@ -407,6 +407,221 @@ def _validate_strict_12(payload: dict[str, Any]) -> None:
                         )
 
 
+# -------- HSI 1.3 --------
+
+
+_INFERENCE_MODES_13 = _INFERENCE_MODES_12
+_DIRECTIONS_13 = frozenset({"higher_is_more", "lower_is_more", "bidirectional", "categorical"})
+_OBSERVABLE_MODALITIES_13 = frozenset({"physiological", "kinematic", "digital"})
+_SINGLE_MODALITY_DOMAINS_13 = frozenset({"physiological", "kinematic", "digital"})
+_MULTIMODAL_DOMAINS_13 = frozenset({"cognitive", "affective"})
+_AXIS_DOMAINS_13 = _SINGLE_MODALITY_DOMAINS_13 | _MULTIMODAL_DOMAINS_13
+
+
+def _iter_readings_with_domain_13(axes: Any) -> Iterable[tuple[str, dict[str, Any]]]:
+    """Yield (domain_key, reading) pairs across all 1.3 axes domains."""
+    if not isinstance(axes, dict):
+        return
+    for domain_key, domain in axes.items():
+        if not isinstance(domain, list):
+            continue
+        for r in domain:
+            if isinstance(r, dict):
+                yield domain_key, r
+
+
+def _validate_strict_13(payload: dict[str, Any]) -> None:
+    """
+    HSI 1.3 strict checks (RFC-HSI-0010 §12, RFC-HSI-0011 §9):
+
+    Carryover from 1.2:
+    - computed_at_utc >= observed_at_utc
+    - window.end_utc >= window.start_utc
+    - axis_reading.window_ids reference declared /windows keys
+    - embedding.window_id references a declared window key
+    - axis_reading.evidence_source_ids reference meta.provenance.sources keys when non-empty
+    - embedding.evidence_source_ids reference meta.provenance.sources keys when non-empty
+    - null score readings require non-empty top-level meta (explanation)
+    - inference_mode vocabulary when present
+    - embedding.dimension equals len(vector) when vector is present
+
+    1.3 additions:
+    - direction vocabulary (rejects 1.2 'higher_is_less'; accepts 'lower_is_more', 'categorical')
+    - axes is closed to {physiological, kinematic, digital, cognitive, affective}
+    - HSI-1.3-MODALITIES-USED-MISSING: every reading in cognitive/affective MUST set modalities_used
+    - HSI-1.3-MODALITIES-USED-FORBIDDEN: readings in physiological/kinematic/digital MUST NOT
+    - HSI-1.3-AFFECTIVE-AVAILABILITY: readings in affective MUST have modalities_used containing
+      'physiological' OR both of {'kinematic','digital'}
+    - HSI-1.3-CATEGORICAL-LABEL-IN-CATEGORIES: when direction == categorical, label MUST appear
+      in categories
+    """
+    windows = payload.get("windows")
+    if not isinstance(windows, dict) or not windows:
+        raise StrictValidationError("windows must be a non-empty object for strict validation")
+    window_id_set = set(windows.keys())
+
+    _check_observed_computed(payload)
+
+    for wid, w in windows.items():
+        if not isinstance(w, dict):
+            raise StrictValidationError(f"window '{wid}' must be an object")
+        try:
+            start = _parse_rfc3339(w["start_utc"])
+            end = _parse_rfc3339(w["end_utc"])
+        except Exception as e:  # noqa: BLE001
+            raise StrictValidationError(f"invalid window timestamps for '{wid}': {e}") from e
+        if end < start:
+            raise StrictValidationError(f"window '{wid}' end_utc must be >= start_utc")
+
+    axes = payload.get("axes")
+    if axes is not None:
+        if not isinstance(axes, dict):
+            raise StrictValidationError("axes must be an object")
+        unknown_domains = set(axes.keys()) - _AXIS_DOMAINS_13
+        if unknown_domains:
+            raise StrictValidationError(
+                f"axes contains domains outside the canonical 1.3 set: {sorted(unknown_domains)}; "
+                f"expected subset of {sorted(_AXIS_DOMAINS_13)}"
+            )
+
+    prov_sources = _provenance_sources(payload)
+
+    for domain_key, r in _iter_readings_with_domain_13(payload.get("axes")):
+        if r.get("score") is None and r.get("direction") != "categorical" and "name" in r:
+            _require_non_empty_meta(
+                payload,
+                "axis reading with null score requires a non-empty top-level meta explanation",
+            )
+
+        direction = r.get("direction")
+        if direction is not None and direction not in _DIRECTIONS_13:
+            raise StrictValidationError(
+                f"axis reading has invalid direction '{direction}'; "
+                f"expected one of {sorted(_DIRECTIONS_13)}"
+            )
+
+        wids = r.get("window_ids")
+        if isinstance(wids, list):
+            for wid in wids:
+                if wid not in window_id_set:
+                    raise StrictValidationError(f"axis reading references unknown window id '{wid}'")
+
+        imode = r.get("inference_mode")
+        if imode is not None and imode not in _INFERENCE_MODES_13:
+            raise StrictValidationError(
+                f"axis reading has invalid inference_mode '{imode}'; "
+                f"expected one of {sorted(_INFERENCE_MODES_13)}"
+            )
+
+        modalities_used = r.get("modalities_used")
+        if domain_key in _MULTIMODAL_DOMAINS_13:
+            if not modalities_used:
+                raise StrictValidationError(
+                    f"HSI-1.3-MODALITIES-USED-MISSING: axes.{domain_key}[] reading "
+                    f"'{r.get('name')}' must include a non-empty modalities_used"
+                )
+            if not isinstance(modalities_used, list):
+                raise StrictValidationError("modalities_used must be an array")
+            unknown = [m for m in modalities_used if m not in _OBSERVABLE_MODALITIES_13]
+            if unknown:
+                raise StrictValidationError(
+                    f"modalities_used entries must be in {sorted(_OBSERVABLE_MODALITIES_13)}; "
+                    f"got {unknown}"
+                )
+            if domain_key == "affective":
+                used = set(modalities_used)
+                if "physiological" not in used and not {"kinematic", "digital"} <= used:
+                    raise StrictValidationError(
+                        f"HSI-1.3-AFFECTIVE-AVAILABILITY: axes.affective[] reading "
+                        f"'{r.get('name')}' modalities_used must contain 'physiological' "
+                        f"or both 'kinematic' and 'digital'; got {sorted(used)}"
+                    )
+        elif domain_key in _SINGLE_MODALITY_DOMAINS_13:
+            if modalities_used is not None:
+                raise StrictValidationError(
+                    f"HSI-1.3-MODALITIES-USED-FORBIDDEN: axes.{domain_key}[] reading "
+                    f"'{r.get('name')}' must not include modalities_used "
+                    "(modality is encoded by the axis-domain key)"
+                )
+
+        if direction == "categorical":
+            label = r.get("label")
+            categories = r.get("categories")
+            if not isinstance(label, str) or not isinstance(categories, list):
+                raise StrictValidationError(
+                    "categorical axis_reading must include `label` (string) and "
+                    "`categories` (array)"
+                )
+            if label not in categories:
+                raise StrictValidationError(
+                    f"HSI-1.3-CATEGORICAL-LABEL-IN-CATEGORIES: axes.{domain_key}[] reading "
+                    f"'{r.get('name')}' label '{label}' must appear in categories {categories}"
+                )
+
+        evidence = r.get("evidence_source_ids")
+        if evidence:
+            if prov_sources is None or not prov_sources:
+                raise StrictValidationError(
+                    "evidence_source_ids present but meta.provenance.sources is missing or empty"
+                )
+            if not isinstance(evidence, list):
+                raise StrictValidationError("evidence_source_ids must be an array")
+            source_keys = set(prov_sources.keys())
+            for sid in evidence:
+                if sid not in source_keys:
+                    raise StrictValidationError(
+                        f"axis reading references unknown provenance source id '{sid}'"
+                    )
+
+    if prov_sources is not None:
+        for sid, src in prov_sources.items():
+            if not isinstance(src, dict):
+                continue
+            if "source_tier" in src:
+                raise StrictValidationError(
+                    f"meta.provenance.sources['{sid}'] uses 1.2 'source_tier'; "
+                    "1.3 sources must use the 'tiers' object instead"
+                )
+            tiers = src.get("tiers")
+            if tiers is not None:
+                if not isinstance(tiers, dict) or not tiers:
+                    raise StrictValidationError(
+                        f"meta.provenance.sources['{sid}'].tiers must be a non-empty object"
+                    )
+
+    embeddings = payload.get("embeddings")
+    if embeddings is not None:
+        if not isinstance(embeddings, list):
+            raise StrictValidationError("embeddings must be an array")
+        for i, emb in enumerate(embeddings):
+            if not isinstance(emb, dict):
+                raise StrictValidationError(f"embeddings[{i}] must be an object")
+            ewid = emb.get("window_id")
+            if ewid not in window_id_set:
+                raise StrictValidationError(f"embedding references unknown window_id '{ewid}'")
+            vec = emb.get("vector")
+            dim = emb.get("dimension")
+            if vec is not None:
+                if not isinstance(vec, list):
+                    raise StrictValidationError("embedding.vector must be an array when present")
+                if isinstance(dim, int) and dim != len(vec):
+                    raise StrictValidationError("embedding.dimension must equal len(embedding.vector)")
+            evidence = emb.get("evidence_source_ids")
+            if evidence:
+                if prov_sources is None or not prov_sources:
+                    raise StrictValidationError(
+                        "embedding.evidence_source_ids present but meta.provenance.sources is missing or empty"
+                    )
+                if not isinstance(evidence, list):
+                    raise StrictValidationError("embedding.evidence_source_ids must be an array")
+                source_keys = set(prov_sources.keys())
+                for sid in evidence:
+                    if sid not in source_keys:
+                        raise StrictValidationError(
+                            f"embedding references unknown provenance source id '{sid}'"
+                        )
+
+
 # -------- dispatcher --------
 
 
@@ -414,6 +629,7 @@ _STRICT_BY_VERSION = {
     "1.0": _validate_strict_10,
     "1.1": _validate_strict_11,
     "1.2": _validate_strict_12,
+    "1.3": _validate_strict_13,
 }
 
 
