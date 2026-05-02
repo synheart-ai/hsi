@@ -1,0 +1,173 @@
+{
+  "hsi_version": "1.2",
+  "observed_at_utc": "2026-04-18T17:16:11Z",
+  "computed_at_utc": "2026-04-18T17:17:11Z",
+  "producer": {
+    "name": "synheart-flux",
+    "version": "0.4.0"
+  },
+  "windows": {
+    "win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c": {
+      "start_utc": "2026-04-18T17:16:11Z",
+      "end_utc": "2026-04-18T17:17:11Z",
+      "label": "realtime"
+    }
+  },
+  "axes": {
+    "physiological": [
+      {
+        "name": "sleep",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://sleep_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": ["s_wear"],
+        "notes": "cold-start: rulepack emitted neutral score, confidence floored to 0 until baseline warms"
+      },
+      {
+        "name": "recovery",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://recovery_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": ["s_wear"]
+      },
+      {
+        "name": "strain",
+        "score": 0.3,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://strain_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": ["s_wear", "s_phone"]
+      }
+    ],
+    "engagement": [
+      {
+        "name": "focus",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://focus_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": ["s_wear", "s_phone"]
+      },
+      {
+        "name": "capacity",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://capacity_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": ["s_wear", "s_phone"]
+      }
+    ],
+    "emotion": [
+      {
+        "name": "valence",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "bidirectional",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://emotion_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "arousal",
+        "score": 0.5,
+        "confidence": 0.0,
+        "direction": "bidirectional",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://emotion_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": []
+      },
+      {
+        "name": "stress",
+        "score": 1.0,
+        "confidence": 0.0,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://emotion_v1",
+        "window_ids": ["win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c"],
+        "evidence_source_ids": []
+      }
+    ]
+  },
+  "embeddings": [
+    {
+      "window_id": "win_b65464375d5bd0f6636ffaf4a46227a2291d1174188a176c",
+      "vector_hash": "sha256:5bf80e58972b14931a9f8278d300b6fd274e8c481451825fdf00c0e017f6ebbd",
+      "dimension": 64,
+      "encoding": "float32",
+      "confidence": 1.0,
+      "model": "synheart-jl-64",
+      "evidence_source_ids": ["s_wear", "s_phone"]
+    }
+  ],
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true,
+    "embedding_allowed": false,
+    "consent": "explicit",
+    "purposes": ["other"],
+    "notes": "purposes outside RFC-HSI-0008 \u00a79 controlled vocabulary: self_insight, adaptive_ux"
+  },
+  "meta": {
+    "ids": {
+      "subject_id": "sub_gZnOK1D6woK2OFloTGHPWuGBanRSJJoqz2dpQZTF5Ac",
+      "session_id": "sess_f1233fe1-4e54-4071-82d6-a90889755c9f",
+      "hsi_id": "hsi_c2dd615e574dc30ff80a154a05d024943961bd118c4bb4f0",
+      "hsv_ids": [
+        "hsv_6d559822521ec3b747fcb166a47c4d96239dd7e525c36c80",
+        "hsv_b6a9022b1cd0135227427d4e32a25f62e3b7b722548729a0",
+        "hsv_d0d7e2c89498fb5062da7b5ee4e84e2f9024cc88ecb04e01",
+        "hsv_1d9e0cd435b105f0949d01881175e4ff66c1e8739ba1a2b1",
+        "hsv_e803fae2b2ffcfd45956d5e8ee658724802d9c8b37de8c25",
+        "hsv_de2a6bcdb97d271feebe7c84390d3ff8b218c6a51f230603"
+      ]
+    },
+    "snapshot_type": "REALTIME",
+    "provenance": {
+      "baseline_status": "Empty",
+      "providers": [
+        {
+          "id": "synheart-state-runtime",
+          "version": "0.4.0"
+        }
+      ],
+      "engine": "synheart-state-runtime",
+      "engine_version": "0.4.0",
+      "sources": {
+        "s_wear": {
+          "type": "sensor",
+          "quality": 0.5,
+          "degraded": false,
+          "source_tier": 2,
+          "device_class": "strap",
+          "signals": ["ppg", "hrv", "rr"],
+          "transport": "ble",
+          "vendor": "polar"
+        },
+        "s_phone": {
+          "type": "sensor",
+          "quality": 0.5,
+          "degraded": false,
+          "source_tier": 3,
+          "device_class": "phone",
+          "signals": ["accel", "touch"],
+          "transport": "inproc"
+        }
+      }
+    }
+  }
+}
