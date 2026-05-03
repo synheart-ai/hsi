@@ -17,16 +17,8 @@
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true
   },
-  "meta": {
-    "provenance": {
-      "sources": {
-        "s_wear": {
-          "type": "sensor",
-          "quality": 0.9,
-          "degraded": false,
-          "tiers": { "audio": 1 }
-        }
-      }
-    }
+  "integrity": {
+    "canonicalization": "minify-then-sha256",
+    "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   }
 }

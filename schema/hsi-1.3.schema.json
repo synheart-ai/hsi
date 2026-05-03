@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
 
-  "$comment": "HSI 1.3 canonical schema. Adds the 5-axis canonical domain set (RFC-HSI-0010), per-modality fidelity tiers on sources (RFC-HSI-0011), and the categorical reading shape. `source_tier` is replaced by `tiers` on `meta.provenance.sources[*]`; readings and embeddings derive their effective per-modality tier by resolving evidence_source_ids. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
+  "$comment": "HSI 1.3 canonical schema. Adds the 5-axis canonical domain set (RFC-HSI-0010), per-channel `confidence_breakdown` on multimodal readings (RFC-HSI-0011), and the categorical reading shape. The 1.2 `source.source_tier` field is carried over unchanged — it captures architectural fidelity (Tier 1 = ground truth, Tier 4 = snapshot/minimal) which is orthogonal to the transient `source.quality` scalar. The earlier RFC-HSI-0011 draft of a per-modality `tiers` object on sources was rejected during 1.3 review (uncalibrated cap table, invented kinematic/digital ladders); per-channel attribution on multimodal readings is expressed via `axis_reading.confidence_breakdown` instead. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
 
   "required": [
     "hsi_version",
@@ -53,6 +53,8 @@
 
     "privacy": { "$ref": "#/$defs/privacy" },
 
+    "integrity": { "$ref": "#/$defs/integrity" },
+
     "meta": {
       "type": "object",
       "properties": {
@@ -74,43 +76,17 @@
       "maximum": 1
     },
 
-    "observable_modality": {
-      "type": "string",
-      "enum": ["physiological", "kinematic", "digital"],
-      "$comment": "RFC-HSI-0010 §6 observable modality set. The fourth canonical modality `multimodal` is a fusion outcome and is NOT a valid observable; it cannot appear in modalities_used or as a tier key."
-    },
-
-    "physio_tier_value": {
+    "source_tier": {
       "type": "integer",
       "minimum": 1,
       "maximum": 4,
-      "$comment": "Physiological signal-fidelity tier per RFC-HSI-0011 §4.1. 1 = ground-truth (RR intervals, lab-grade ECG), 2 = vendor-derived high-fidelity, 3 = proxy time-series (≤1 Hz HR), 4 = snapshot/minimal."
+      "$comment": "Architectural signal-fidelity tier declared on a source in meta.provenance.sources. 1 = ground-truth (RR intervals, raw sensor stream, lab-grade ECG), 2 = vendor-derived high-fidelity, 3 = proxy time-series (≤1 Hz HR traces, motion-derived proxies), 4 = snapshot/minimal. Higher tier numbers SHOULD correspond to reduced downstream trust. Distinct from `source.quality` (transient/situational reliability in `[0, 1]`); a source can have `source_tier: 1, quality: 0.3` (architecturally ground-truth, currently degraded) or `source_tier: 3, quality: 0.95` (architecturally proxy-only, currently clean signal). The tier table is physiology-flavored; for non-physio sources producers SHOULD pick the closest analog along the raw → aggregate spectrum (raw events ≈ Tier 1, aggregated rollup ≈ Tier 4). Readings and embeddings derive an effective tier consumer-side by resolving evidence_source_ids and taking the most conservative (highest-numbered) tier among cited sources. See RFC-HSI-0008 §6.7."
     },
 
-    "kinematic_tier_value": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 3,
-      "$comment": "Kinematic signal-fidelity tier per RFC-HSI-0011 §4.2. 1 = high-rate inertial (≥50 Hz multi-axis), 2 = event-based / coarse (steps, <25 Hz accel), 3 = sparse / vendor-aggregate (hourly bins, daily totals)."
-    },
-
-    "digital_tier_value": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 3,
-      "$comment": "Digital-interaction signal-fidelity tier per RFC-HSI-0011 §4.3. 1 = rich (multi-kind events ≥30/min over ≥120 s), 2 = moderate (≥10/min over ≥60 s), 3 = sparse (<60 s windows or <10 events/min)."
-    },
-
-    "tiers": {
-      "type": "object",
-      "additionalProperties": false,
-      "minProperties": 1,
-      "properties": {
-        "physiological": { "$ref": "#/$defs/physio_tier_value" },
-        "kinematic": { "$ref": "#/$defs/kinematic_tier_value" },
-        "digital": { "$ref": "#/$defs/digital_tier_value" }
-      },
-      "$comment": "Per-modality fidelity tier set declared on a source in meta.provenance.sources (RFC-HSI-0011 §6). Lives at the source only; readings and embeddings derive their effective per-modality tier by resolving evidence_source_ids and taking the most conservative (highest-numbered) value across cited sources for each modality. Absence of a key MUST be interpreted as 'this modality did not contribute,' NOT as the worst-numbered tier."
+    "observable_modality": {
+      "type": "string",
+      "enum": ["physiological", "kinematic", "digital"],
+      "$comment": "RFC-HSI-0010 §6 observable modality set. The fourth canonical modality `multimodal` is a fusion outcome and is NOT a valid observable; it cannot appear in modalities_used or as a confidence_breakdown key."
     },
 
     "producer": {
@@ -169,8 +145,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$",
-          "$comment": "Lower-snake-case axis member name. RFC-HSI-0010 §4.1–§4.5 list canonical members per domain; unknown names within a known domain MUST be tolerated (RFC-HSI-0008 §6.5)."
+          "$comment": "Axis member name. RFC-HSI-0010 §4.1–§4.5 list canonical members per domain; SHOULD be lowercase-snake-case but the schema does not enforce a pattern (1.2 compat). Unknown names within a known domain MUST be tolerated (RFC-HSI-0008 §6.5)."
         },
         "score": {
           "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
@@ -195,7 +170,7 @@
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/id",
-            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Resolve per-modality fidelity via each cited source's `tiers` field; the reading's effective tier per modality is the most conservative (highest-numbered) value across cited sources."
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Channel-fidelity information lives on each source descriptor (`quality`, `signals`, `degraded`)."
           }
         },
         "modalities_used": {
@@ -203,7 +178,18 @@
           "uniqueItems": true,
           "minItems": 1,
           "items": { "$ref": "#/$defs/observable_modality" },
-          "$comment": "RFC-HSI-0010 §5.1. Required on readings in axes.cognitive[] and axes.affective[]; forbidden on readings in axes.physiological[] / axes.kinematic[] / axes.digital[] (the domain key already encodes modality). Placement is enforced at the axes-domain level (see /$defs/axes_domain_*) plus HSI-VALIDATE-STRICT."
+          "$comment": "RFC-HSI-0010 §5.1. Required on readings in axes.cognitive[] and axes.affective[]; forbidden on readings in axes.physiological[] / axes.kinematic[] / axes.digital[]."
+        },
+        "confidence_breakdown": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "physiological": { "$ref": "#/$defs/score01" },
+            "kinematic": { "$ref": "#/$defs/score01" },
+            "digital": { "$ref": "#/$defs/score01" }
+          },
+          "$comment": "RFC-HSI-0011 §4. Per-channel confidence attribution on multimodal readings only. Permitted on axes.cognitive[] and axes.affective[]; rejected on single-modality readings via axes_domain_single_modality. Keys SHOULD be a subset of modalities_used (HSI-VALIDATE-STRICT). PROVISIONAL in 1.3 — RFC-HSI-0011 §9 documents the 1.4 revisit decision rule (keep only if at least one canonical producer populates the field and at least one canonical consumer reads it; otherwise deprecate in 1.4 and remove in 1.5). Producers using learned multimodal models often cannot meaningfully decompose fused confidence per channel and SHOULD omit the field rather than emit guessed values."
         },
         "label": {
           "type": "string",
@@ -248,8 +234,13 @@
         "allOf": [
           { "$ref": "#/$defs/axis_reading" },
           {
-            "$comment": "RFC-HSI-0010 §5.1: modalities_used is forbidden on readings in single-modality domains; the axis-domain key already encodes the modality.",
-            "not": { "required": ["modalities_used"] }
+            "$comment": "RFC-HSI-0010 §5.1 + RFC-HSI-0011 §4.2: modalities_used and confidence_breakdown are forbidden on readings in single-modality domains; the axis-domain key already encodes the modality.",
+            "not": {
+              "anyOf": [
+                { "required": ["modalities_used"] },
+                { "required": ["confidence_breakdown"] }
+              ]
+            }
           }
         ]
       }
@@ -261,7 +252,7 @@
         "allOf": [
           { "$ref": "#/$defs/axis_reading" },
           {
-            "$comment": "RFC-HSI-0010 §5.1: modalities_used is required on every reading in multimodal domains (cognitive, affective).",
+            "$comment": "RFC-HSI-0010 §5.1: modalities_used is required on every reading in multimodal domains (cognitive, affective). confidence_breakdown is permitted but optional (RFC-HSI-0011 §4).",
             "required": ["modalities_used"]
           }
         ]
@@ -293,9 +284,9 @@
         },
         "quality": { "$ref": "#/$defs/score01" },
         "degraded": { "type": "boolean" },
-        "tiers": {
-          "$ref": "#/$defs/tiers",
-          "$comment": "RFC-HSI-0011 §6.2: per-modality fidelity tier set for this source. Inherited by readings and embeddings that cite this source via evidence_source_ids; resolution rule in RFC-HSI-0011 §6.3. Replaces the 1.2 `source_tier` integer field."
+        "source_tier": {
+          "$ref": "#/$defs/source_tier",
+          "$comment": "Architectural fidelity of this source. Carried over from HSI 1.2 unchanged. Orthogonal to `quality` (transient) and `signals` (channel availability)."
         },
         "device_class": {
           "type": "string",
@@ -320,7 +311,7 @@
           "type": "array",
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 },
-          "$comment": "Physical or logical signals this source produces. Free-form lowercase tokens; suggested canonical names: `hrv`, `rr`, `ecg`, `ppg`, `spo2`, `resp`, `accel`, `gyro`, `mag`, `temp`, `eda`, `gsr`, `eeg`, `emg`, `touch`, `audio`. Consumers SHOULD tolerate unknown entries."
+          "$comment": "Physical or logical signals this source produces. Free-form lowercase tokens; suggested canonical names: `hrv`, `rr`, `ecg`, `ppg`, `spo2`, `resp`, `accel`, `gyro`, `mag`, `temp`, `eda`, `gsr`, `eeg`, `emg`, `touch`, `audio`. Consumers SHOULD tolerate unknown entries. Channel availability (e.g. `ppg` vs `touch`) is conveyed here; no separate fidelity tier exists in 1.3."
         },
         "transport": {
           "type": "string",
@@ -416,15 +407,56 @@
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/id",
-            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Per-modality fidelity is resolved against cited sources' `tiers` field."
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Channel-fidelity is read off each cited source's quality/signals/degraded."
           }
         }
       },
+      "$comment": "Embeddings do not carry per-channel confidence breakdown in 1.3; embedding-level fusion attribution is out of scope.",
       "allOf": [
         {
           "anyOf": [{ "required": ["vector"] }, { "required": ["vector_hash"] }]
         }
       ]
+    },
+
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "content_hash"],
+      "properties": {
+        "canonicalization": {
+          "type": "string",
+          "enum": ["jcs/rfc8785-v1"],
+          "$comment": "Canonicalization method applied to the payload (with `integrity` removed) before hashing. Reserved values per RFC-HSI-0009 §3.1."
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "$comment": "Hash of the canonicalized payload with `integrity` removed. Lowercase hex prefixed by `sha256:`. RFC-HSI-0009 §4. IMPORTANT for producers: hashing is NOT self-referential — strip the `integrity` field from the payload object BEFORE canonicalizing and hashing, then attach the resulting hash back into a fresh `integrity` block. Consumers verify by performing the same strip-canonicalize-hash and comparing byte-for-byte."
+        },
+        "signature": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "key_id", "value"],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": ["ed25519", "ecdsa-p256-sha256", "rsa-pss-sha256"]
+            },
+            "key_id": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "URI or DID identifying the signing key. Resolution is out-of-band per RFC-HSI-0009 §5."
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "Prefixed signature bytes (e.g. `base64url:...`) over the UTF-8 bytes of `content_hash`. RFC-HSI-0009 §5."
+            }
+          }
+        }
+      },
+      "$comment": "Optional payload integrity block per RFC-HSI-0009. Presence does not imply verification — HSI-VALIDATE-BASIC and -STRICT do NOT recompute the hash by default; HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7) is the tier that does."
     },
 
     "privacy": {

@@ -19,11 +19,13 @@
         "score": 0.4,
         "confidence": 0.6,
         "direction": "higher_is_more",
+        "confidence_breakdown": {
+          "physiological": 0.6
+        },
         "inference_mode": "deterministic_rule",
         "model_id": "rulepack://strain_v1",
         "window_ids": ["w_0900"],
-        "evidence_source_ids": ["s_wear"],
-        "tiers": { "physiological": 2 }
+        "evidence_source_ids": ["s_wear"]
       }
     ]
   },
@@ -39,7 +41,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "tiers": { "physiological": 2 }
+          "source_tier": 2
         }
       }
     }

@@ -25,7 +25,7 @@ This is a deliberate restructuring under HSI's pre-stable regime (`versioning.md
 
 ## 2. Non-goals
 
-- **Per-modality fidelity tiers.** A separate RFC (RFC-HSI-0011) defines `tiers: { physiological?, kinematic?, digital? }`, replacing the 1.2 `source_tier` field in HSI 1.3. This RFC takes no position on tier shape; consumers and producers should treat the two RFCs as a paired 1.3 change.
+- **Per-channel confidence attribution.** A separate RFC (RFC-HSI-0011) defines `axis_reading.confidence_breakdown`, an optional per-modality confidence map on multimodal readings. This RFC takes no position on its shape; consumers and producers should treat the two RFCs as a paired 1.3 change. (RFC-HSI-0011 was revised during 1.3 review: the earlier `tiers` design was rejected, and the 1.2 `source_tier` field is removed in 1.3 with no source-level replacement.)
 - **Closed axis-name vocabularies.** Each domain lists v1 canonical members, but unknown axis names within a known domain MUST be tolerated per RFC-HSI-0008 §6.5 and `versioning.md`.
 - **Raw-signal transport.** HSI carries inferred state, not raw biosignals or feature vectors. §10 makes this an explicit normative constraint.
 - **Inference-method standardization.** Producers remain free to use rulepacks, learned models, or composites; `inference_mode` (RFC-HSI-0008 §6.3) continues to describe the method independently of `modality` (which describes the input channel).
@@ -184,7 +184,7 @@ Producers MUST follow these rules for which axis members may be emitted given wh
 | `axes.kinematic[*]` | The `kinematic` modality MUST be available. |
 | `axes.digital[*]` | The `digital` modality MUST be available. |
 | `axes.cognitive[*]` | `modalities_used` MUST contain at least one of `physiological`, `kinematic`, `digital`. Confidence SHOULD reflect the number and fidelity of contributing modalities (RFC-HSI-0011 §5). |
-| `axes.affective[*]` | `modalities_used` MUST contain `physiological`, OR contain both `kinematic` and `digital`. Affective members backed only by `digital` are NOT permitted — affective valence and arousal are autonomic constructs and SHOULD have at least body-level evidence (physiological directly, or kinematic + digital as a weaker proxy ensemble). The exact OR/AND structure here is a conservative default; it MAY be relaxed by a future RFC once calibration evidence supports a different rule. |
+| `axes.affective[*]` | `modalities_used` SHOULD contain `physiological`, OR contain both `kinematic` and `digital`. Affective members backed only by `digital` carry weaker evidence — affective valence and arousal are autonomic constructs and *typically* benefit from body-level signals — but research and atypical-deployment producers (e.g. sentiment from typing dynamics) MAY emit digital-only affective readings when their context justifies it. The OR/AND structure is a conservative producer-policy default, not a calibrated science result; the schema and reference STRICT validator do not enforce it. A future RFC may promote this to a normative MUST once calibration evidence supports a defensible rule. |
 
 Producers MUST NOT emit a reading whose required modality is unavailable. They MAY emit `score: null` with a `meta.null_reading_reason` of `modality_unavailable` (RFC-HSI-0008 §6.6) instead, when consumers benefit from a placeholder (e.g. dashboards that render fixed axis lists).
 
@@ -245,7 +245,7 @@ HSI 1.3 reorganizes the axis domain set. Producers migrating from 1.2 follow thi
 3. Convert categorical kinematic readings to the §8 shape (`label`, `categories`, `score: null`, `direction: "categorical"`).
 4. Rename `higher_is_less` → `lower_is_more`.
 5. Move 1.2 `context` axes into `meta.provenance` or `kinematic` as applicable (§11.5).
-6. Rename `source.source_tier: N` to `source.tiers: { "physiological": N }` on every entry in `meta.provenance.sources` per RFC-HSI-0011 §10, and optionally enrich with `tiers.kinematic` / `tiers.digital` where the source has those signals.
+6. Keep `source.source_tier` on every applicable entry in `meta.provenance.sources` exactly as in 1.2 (carried over per RFC-HSI-0011 §3). Optionally adopt `axis_reading.confidence_breakdown` on multimodal readings (RFC-HSI-0011 §4).
 7. Set `hsi_version: "1.3"`.
 
 Producers MAY emit 1.2 and 1.3 in parallel during a transition period; consumers MUST validate each payload against the schema matching its declared `hsi_version`.
@@ -261,8 +261,9 @@ Producers MAY emit 1.2 and 1.3 in parallel during a transition period; consumers
   - All RFC-HSI-0008 §10 STRICT checks remain.
   - **`modalities_used` required-on-multimodal-domains**: every reading in `axes.cognitive[]` and `axes.affective[]` MUST include `modalities_used`. Violation: HSI-1.3-MODALITIES-USED-MISSING.
   - **`modalities_used` forbidden-on-single-modality-domains**: readings in `axes.physiological[]`, `axes.kinematic[]`, and `axes.digital[]` MUST NOT include `modalities_used` (the domain key already encodes the modality). Violation: HSI-1.3-MODALITIES-USED-FORBIDDEN.
-  - **Modality availability** (§9): readings in `axes.affective[]` MUST NOT have `modalities_used == ["digital"]` alone; `modalities_used` MUST contain `physiological`, OR contain both `kinematic` and `digital`.
   - **Categorical reading integrity** (§8): `label` MUST appear in `categories`.
+
+The §9 affective-availability rule is *not* enforced at STRICT in 1.3. It is a producer-policy SHOULD pending calibration; legitimate research producers may emit digital-only affective readings without triggering a STRICT failure. A future RFC may promote it once data supports a defensible rule.
 
 ## 13. Schema additions
 
@@ -325,7 +326,7 @@ There is no standalone `modality` `$def` in 1.3. Modality is encoded by the axis
 }
 ```
 
-`modalities_used` placement (required on cognitive/affective, forbidden elsewhere) is enforced at the `axes_domain` level rather than on `axis_reading` itself, because the rule depends on which domain key the reading appears under. Each axes-domain `$ref` (per §13.3) is wrapped to apply the appropriate `if/then/else` for `modalities_used` presence; the alternative — pushing the constraint into `axis_reading` and discriminating on the parent path — is not expressible in JSON Schema and is delegated to HSI-VALIDATE-STRICT (§12).
+`modalities_used` placement (required on cognitive/affective, forbidden elsewhere) is enforced at the axes-domain level rather than on `axis_reading` itself, because the rule depends on which domain key the reading appears under. The construct is two distinct domain `$defs` (`axes_domain_single_modality` / `axes_domain_multimodal`, see §13.3) that each wrap `axis_reading` in an `allOf` adding a `required: ["modalities_used"]` rule (multimodal wrapper) or a `not: { anyOf: [{ required: ["modalities_used"] }, { required: ["confidence_breakdown"] }] }` rule (single-modality wrapper). The alternative — pushing the constraint into `axis_reading` and discriminating on the parent path — is not expressible in JSON Schema and is delegated to HSI-VALIDATE-STRICT (§12).
 
 ### 13.3 `axes` redefinition
 
@@ -334,28 +335,60 @@ There is no standalone `modality` `$def` in 1.3. Modality is encoded by the axis
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "physiological":       { "$ref": "#/$defs/axes_domain" },
-    "kinematic":           { "$ref": "#/$defs/axes_domain" },
-    "digital": { "$ref": "#/$defs/axes_domain" },
-    "cognitive":           { "$ref": "#/$defs/axes_domain" },
-    "affective":           { "$ref": "#/$defs/axes_domain" }
+    "physiological": { "$ref": "#/$defs/axes_domain_single_modality" },
+    "kinematic":     { "$ref": "#/$defs/axes_domain_single_modality" },
+    "digital":       { "$ref": "#/$defs/axes_domain_single_modality" },
+    "cognitive":     { "$ref": "#/$defs/axes_domain_multimodal" },
+    "affective":     { "$ref": "#/$defs/axes_domain_multimodal" }
   }
 }
 ```
+
+The single-modality / multimodal split is realized by two distinct domain `$defs`. Each wraps `axis_reading` in an `allOf` that adds the modality-placement rule:
+
+```json
+"axes_domain_single_modality": {
+  "type": "array",
+  "items": {
+    "allOf": [
+      { "$ref": "#/$defs/axis_reading" },
+      {
+        "not": {
+          "anyOf": [
+            { "required": ["modalities_used"] },
+            { "required": ["confidence_breakdown"] }
+          ]
+        }
+      }
+    ]
+  }
+},
+"axes_domain_multimodal": {
+  "type": "array",
+  "items": {
+    "allOf": [
+      { "$ref": "#/$defs/axis_reading" },
+      { "required": ["modalities_used"] }
+    ]
+  }
+}
+```
+
+This is the construct that enforces (a) `modalities_used` is required on cognitive/affective and forbidden elsewhere (§5.1), and (b) `confidence_breakdown` from RFC-HSI-0011 is forbidden on single-modality readings.
 
 The 1.2 properties `engagement`, `behavior`, `context`, `emotion` are removed.
 
 ### 13.4 Carry-overs
 
-- `axes_domain` shape unchanged.
-- `source` descriptor unchanged in shape (PR #5's `device_class`, `signals`, `transport`, `vendor` retained). The 1.2 `source.source_tier` field is **removed** in 1.3 and replaced by `source.tiers` per RFC-HSI-0011. `source_tier` does not appear at any other site in 1.2 (post-PR #5) and so has nothing else to remove in 1.3.
-- `provenance` shape unchanged. Tier resolution for readings and embeddings is consumer-side, via `evidence_source_ids` against `meta.provenance.sources[*].tiers` (RFC-HSI-0011 §6.3); no `tiers` field is added to `axis_reading` or `embedding`.
+- The 1.2 single `axes_domain` `$def` is replaced by two domain `$defs` — `axes_domain_single_modality` and `axes_domain_multimodal` (§13.3) — to enforce the `modalities_used` placement rule at the schema level. The inner `axis_reading` shape is unchanged from 1.2 modulo the `modalities_used`, `confidence_breakdown`, `label`, `categories` additions and the extended `direction` enum; the wrapping is what's new.
+- `source` descriptor unchanged from HSI 1.2 (post-PR #5). All 1.2 fields — `type`, `quality`, `degraded`, `source_tier`, `device_class`, `signals`, `transport`, `vendor`, `notes` — carry over with identical semantics. RFC-HSI-0011 originally proposed replacing `source_tier` with a per-modality `tiers` object; that draft was rejected and `source_tier` remains the canonical architectural-fidelity field on sources.
+- `provenance` shape unchanged. Per-channel inference confidence on multimodal readings is expressed via `axis_reading.confidence_breakdown` (RFC-HSI-0011 §4); architectural channel fidelity continues to live on `source.source_tier`.
 - `embedding` shape unchanged.
 - All temporal, privacy, and producer fields unchanged.
 
 ## 14. Examples
 
-Examples place `tiers` on the cited sources per RFC-HSI-0011 §6.2 (source-only); the reading's effective per-modality tier is resolved by the consumer via `evidence_source_ids` per §6.3. Each example shows the reading and the relevant source descriptors together so the resolution is observable.
+`source.source_tier` (architectural fidelity) carries over from 1.2 unchanged and continues to live on each source descriptor. Per-channel inference confidence on multimodal readings is expressed inline on the reading via `axis_reading.confidence_breakdown` (RFC-HSI-0011 §4).
 
 ### 14.1 Multimodal cognitive axis (lives under `axes.cognitive[]`)
 
@@ -368,6 +401,10 @@ Reading:
   "confidence": 0.82,
   "direction": "higher_is_more",
   "modalities_used": ["physiological", "digital"],
+  "confidence_breakdown": {
+    "physiological": 0.85,
+    "digital": 0.78
+  },
   "inference_mode": "composite",
   "model_id": "rulepack://focus_v1",
   "window_ids": ["w-2026-05-01-0900-60s"],
@@ -379,16 +416,12 @@ Cited sources in `meta.provenance.sources`:
 
 ```json
 {
-  "watch-ble-1":     { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "physiological": 2 } },
-  "phone-os-events": { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "digital": 1 } }
+  "watch-ble-1":     { "type": "sensor", "quality": 0.9, "degraded": false, "source_tier": 2, "signals": ["ppg", "hrv"] },
+  "phone-os-events": { "type": "sensor", "quality": 0.9, "degraded": false, "source_tier": 1, "signals": ["touch"] }
 }
 ```
 
-Resolved per-modality tiers for the reading: `{ physiological: 2, digital: 1 }`.
-
 ### 14.2 Categorical kinematic axis (lives under `axes.kinematic[]`)
-
-Reading:
 
 ```json
 {
@@ -409,15 +442,13 @@ Cited source:
 
 ```json
 {
-  "watch-accel": { "type": "sensor", "quality": 0.9, "degraded": false, "tiers": { "kinematic": 1 } }
+  "watch-accel": { "type": "sensor", "quality": 0.9, "degraded": false, "source_tier": 1, "signals": ["accel", "gyro"] }
 }
 ```
 
-Resolved per-modality tiers: `{ kinematic: 1 }`.
+Single-modality reading; no `confidence_breakdown` (the parent domain key encodes the channel).
 
 ### 14.3 Digital-only axis, browser/desktop producer with no biosensor or motion (lives under `axes.digital[]`)
-
-Reading:
 
 ```json
 {
@@ -436,13 +467,13 @@ Cited source:
 
 ```json
 {
-  "desktop-os-events": { "type": "sensor", "quality": 0.85, "degraded": false, "tiers": { "digital": 1 } }
+  "desktop-os-events": { "type": "sensor", "quality": 0.85, "degraded": false, "source_tier": 1, "signals": ["touch"] }
 }
 ```
 
-Resolved per-modality tiers: `{ digital: 1 }`. `tiers.physiological` is absent across cited sources — consumers MUST treat that as "no signal," not as Tier 4.
+`source_tier: 1` here means "ground-truth interaction events" — raw OS event stream with no upstream aggregation. `source.signals` not containing any biosignal token (`ppg`, `hrv`, etc.) makes "no physiological signal" obvious to consumers regardless of tier.
 
-Note in all three: readings do not carry a `tiers` field; they do not carry a `modality` field either. The reading's modality is encoded by which `axes.<domain>` array it appears in (§5.2). Cognitive/affective readings carry `modalities_used`; the three single-modality readings above do not.
+Note in all three: readings do not carry a source-level tier or a `modality` field. The reading's modality is encoded by which `axes.<domain>` array it appears in (§5.2). The multimodal reading in §14.1 carries `modalities_used` and (optionally) `confidence_breakdown`; the two single-modality readings carry neither.
 
 ## 15. Privacy considerations
 
@@ -467,8 +498,8 @@ When this RFC is Accepted, the changes in §13 are materialized in `schema/hsi-1
 
 The schema PR also lands:
 
-- New valid examples: `examples/valid/runtime_snapshot_1_3.json` (full 5-axis), `examples/valid/digital_only.json` (browser/desktop producer with no biosensor or motion), `examples/valid/categorical_kinematic.json`, `examples/valid/multimodal_cognitive.json`.
-- New invalid examples: `examples/invalid/missing_modality.json`, `examples/invalid/categorical_score_conflict.json`, `examples/invalid/multimodal_without_modalities_used.json`, `examples/invalid/affective_from_digital_only.json`.
+- New valid examples: `examples/valid/runtime_snapshot_1_3.json` (full 5-axis), `examples/valid/digital_only.json` (browser/desktop producer with no biosensor or motion), `examples/valid/categorical_kinematic.json`, `examples/valid/multimodal_cognitive.json`, `examples/valid/affective_digital_only_research.json` (digital-only `valence` reading from a research producer — illustrates the §9 SHOULD vs. MUST decision: the affective-availability rule is a producer-policy SHOULD in 1.3, so this payload validates).
+- New invalid examples: `examples/invalid/missing_modality.json`, `examples/invalid/categorical_score_conflict.json`, `examples/invalid/multimodal_without_modalities_used.json`.
 - Strict validator path `tests/hsi_validate.py::_validate_strict_13` and `test-vectors/v1.3/` regression fixtures.
 - CHANGELOG `[1.3]` entry covering this RFC, RFC-HSI-0009, and any other 1.3-targeted changes.
 - README badge bump to 1.3 with links to RFC-HSI-0010 and RFC-HSI-0011 (when published).

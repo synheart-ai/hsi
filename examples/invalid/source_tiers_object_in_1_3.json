@@ -12,20 +12,6 @@
       "end_utc": "2026-05-01T09:01:00Z"
     }
   },
-  "axes": {
-    "cognitive": [
-      {
-        "name": "focus",
-        "score": 0.7,
-        "confidence": 0.7,
-        "direction": "higher_is_more",
-        "inference_mode": "composite",
-        "model_id": "rulepack://focus_v1",
-        "window_ids": ["w_0900"],
-        "evidence_source_ids": ["s_wear"]
-      }
-    ]
-  },
   "privacy": {
     "contains_pii": false,
     "raw_biosignals_allowed": false,
@@ -38,7 +24,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "source_tier": 2
+          "tiers": { "physiological": 2 }
         }
       }
     }

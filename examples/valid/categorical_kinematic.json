@@ -41,7 +41,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "tiers": { "kinematic": 1 },
+          "source_tier": 1,
           "device_class": "watch",
           "signals": ["accel", "gyro"],
           "transport": "ble"

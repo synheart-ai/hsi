@@ -39,7 +39,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "tiers": { "physiological": 2 }
+          "source_tier": 2
         }
       }
     }

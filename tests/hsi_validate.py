@@ -410,7 +410,7 @@ def _validate_strict_12(payload: dict[str, Any]) -> None:
 # -------- HSI 1.3 --------
 
 
-_INFERENCE_MODES_13 = _INFERENCE_MODES_12
+_INFERENCE_MODES_13 = _INFERENCE_MODES_12  # 1.3 deliberately inherits the 1.2 vocabulary unchanged — no new inference modes in this minor version. RFC-HSI-0010 §5.3 keeps `inference_mode` orthogonal to modality.
 _DIRECTIONS_13 = frozenset({"higher_is_more", "lower_is_more", "bidirectional", "categorical"})
 _OBSERVABLE_MODALITIES_13 = frozenset({"physiological", "kinematic", "digital"})
 _SINGLE_MODALITY_DOMAINS_13 = frozenset({"physiological", "kinematic", "digital"})
@@ -450,10 +450,19 @@ def _validate_strict_13(payload: dict[str, Any]) -> None:
     - axes is closed to {physiological, kinematic, digital, cognitive, affective}
     - HSI-1.3-MODALITIES-USED-MISSING: every reading in cognitive/affective MUST set modalities_used
     - HSI-1.3-MODALITIES-USED-FORBIDDEN: readings in physiological/kinematic/digital MUST NOT
-    - HSI-1.3-AFFECTIVE-AVAILABILITY: readings in affective MUST have modalities_used containing
-      'physiological' OR both of {'kinematic','digital'}
     - HSI-1.3-CATEGORICAL-LABEL-IN-CATEGORIES: when direction == categorical, label MUST appear
       in categories
+
+    The RFC-HSI-0010 §9 affective-availability rule is intentionally NOT enforced here.
+    It is a producer-policy SHOULD pending calibration; promote to STRICT in a future RFC
+    once supporting evidence exists.
+    - HSI-1.3-CONFIDENCE-BREAKDOWN-FORBIDDEN: readings in single-modality domains MUST NOT
+      include confidence_breakdown (RFC-HSI-0011 §4.2; defense-in-depth, primary at BASIC)
+    - HSI-1.3-CONFIDENCE-BREAKDOWN-MISMATCH: when modalities_used and confidence_breakdown are
+      both present, every key of confidence_breakdown MUST appear in modalities_used
+      (RFC-HSI-0011 §4.3)
+    - 1.3 sources MUST NOT include the per-modality `tiers` object (rejected design); the 1.2
+      `source.source_tier` integer is carried over unchanged
     """
     windows = payload.get("windows")
     if not isinstance(windows, dict) or not windows:
@@ -528,14 +537,6 @@ def _validate_strict_13(payload: dict[str, Any]) -> None:
                     f"modalities_used entries must be in {sorted(_OBSERVABLE_MODALITIES_13)}; "
                     f"got {unknown}"
                 )
-            if domain_key == "affective":
-                used = set(modalities_used)
-                if "physiological" not in used and not {"kinematic", "digital"} <= used:
-                    raise StrictValidationError(
-                        f"HSI-1.3-AFFECTIVE-AVAILABILITY: axes.affective[] reading "
-                        f"'{r.get('name')}' modalities_used must contain 'physiological' "
-                        f"or both 'kinematic' and 'digital'; got {sorted(used)}"
-                    )
         elif domain_key in _SINGLE_MODALITY_DOMAINS_13:
             if modalities_used is not None:
                 raise StrictValidationError(
@@ -558,6 +559,36 @@ def _validate_strict_13(payload: dict[str, Any]) -> None:
                     f"'{r.get('name')}' label '{label}' must appear in categories {categories}"
                 )
 
+        confidence_breakdown = r.get("confidence_breakdown")
+        if confidence_breakdown is not None:
+            if domain_key in _SINGLE_MODALITY_DOMAINS_13:
+                raise StrictValidationError(
+                    f"HSI-1.3-CONFIDENCE-BREAKDOWN-FORBIDDEN: axes.{domain_key}[] reading "
+                    f"'{r.get('name')}' must not include confidence_breakdown "
+                    "(single-modality readings have no per-channel attribution to make)"
+                )
+            if not isinstance(confidence_breakdown, dict) or not confidence_breakdown:
+                raise StrictValidationError(
+                    "confidence_breakdown must be a non-empty object"
+                )
+            unknown_keys = [
+                k for k in confidence_breakdown if k not in _OBSERVABLE_MODALITIES_13
+            ]
+            if unknown_keys:
+                raise StrictValidationError(
+                    f"confidence_breakdown keys must be in {sorted(_OBSERVABLE_MODALITIES_13)}; "
+                    f"got {unknown_keys}"
+                )
+            if isinstance(modalities_used, list):
+                used = set(modalities_used)
+                missing = [k for k in confidence_breakdown if k not in used]
+                if missing:
+                    raise StrictValidationError(
+                        f"HSI-1.3-CONFIDENCE-BREAKDOWN-MISMATCH: axes.{domain_key}[] reading "
+                        f"'{r.get('name')}' confidence_breakdown keys {missing} are not in "
+                        f"modalities_used {sorted(used)}"
+                    )
+
         evidence = r.get("evidence_source_ids")
         if evidence:
             if prov_sources is None or not prov_sources:
@@ -577,17 +608,14 @@ def _validate_strict_13(payload: dict[str, Any]) -> None:
         for sid, src in prov_sources.items():
             if not isinstance(src, dict):
                 continue
-            if "source_tier" in src:
+            if "tiers" in src:
                 raise StrictValidationError(
-                    f"meta.provenance.sources['{sid}'] uses 1.2 'source_tier'; "
-                    "1.3 sources must use the 'tiers' object instead"
+                    f"meta.provenance.sources['{sid}'] includes 'tiers'; the per-modality "
+                    "tiers object was rejected during 1.3 review (RFC-HSI-0011 §1). "
+                    "Use `source.source_tier` (integer 1..=4) for architectural fidelity "
+                    "and `axis_reading.confidence_breakdown` for per-channel attribution "
+                    "on multimodal readings."
                 )
-            tiers = src.get("tiers")
-            if tiers is not None:
-                if not isinstance(tiers, dict) or not tiers:
-                    raise StrictValidationError(
-                        f"meta.provenance.sources['{sid}'].tiers must be a non-empty object"
-                    )
 
     embeddings = payload.get("embeddings")
     if embeddings is not None:

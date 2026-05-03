@@ -19,6 +19,10 @@
         "score": 0.7,
         "confidence": 0.7,
         "direction": "higher_is_more",
+        "modalities_used": ["physiological", "digital"],
+        "confidence_breakdown": {
+          "audio": 0.5
+        },
         "inference_mode": "composite",
         "model_id": "rulepack://focus_v1",
         "window_ids": ["w_0900"],

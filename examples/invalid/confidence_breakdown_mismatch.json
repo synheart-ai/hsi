@@ -13,14 +13,19 @@
     }
   },
   "axes": {
-    "physiological": [
+    "cognitive": [
       {
-        "name": "strain",
-        "score": 0.4,
-        "confidence": 0.6,
+        "name": "focus",
+        "score": 0.7,
+        "confidence": 0.7,
         "direction": "higher_is_more",
-        "inference_mode": "deterministic_rule",
-        "model_id": "rulepack://strain_v1",
+        "modalities_used": ["physiological"],
+        "confidence_breakdown": {
+          "physiological": 0.8,
+          "digital": 0.6
+        },
+        "inference_mode": "composite",
+        "model_id": "rulepack://focus_v1",
         "window_ids": ["w_0900"],
         "evidence_source_ids": ["s_wear"]
       }

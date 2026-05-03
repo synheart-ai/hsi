@@ -21,6 +21,10 @@
         "confidence": 0.82,
         "direction": "higher_is_more",
         "modalities_used": ["physiological", "digital"],
+        "confidence_breakdown": {
+          "physiological": 0.85,
+          "digital": 0.78
+        },
         "inference_mode": "composite",
         "model_id": "rulepack://focus_v1",
         "window_ids": ["w_0900"],
@@ -40,7 +44,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "tiers": { "physiological": 2 },
+          "source_tier": 2,
           "device_class": "watch",
           "signals": ["ppg", "hrv"],
           "transport": "ble"
@@ -49,7 +53,7 @@
           "type": "sensor",
           "quality": 0.9,
           "degraded": false,
-          "tiers": { "digital": 1 },
+          "source_tier": 1,
           "device_class": "phone",
           "signals": ["touch"],
           "transport": "inproc"

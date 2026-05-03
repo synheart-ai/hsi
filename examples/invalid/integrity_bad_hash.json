@@ -17,16 +17,8 @@
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true
   },
-  "meta": {
-    "provenance": {
-      "sources": {
-        "s_wear": {
-          "type": "sensor",
-          "quality": 0.9,
-          "degraded": false,
-          "tiers": {}
-        }
-      }
-    }
+  "integrity": {
+    "canonicalization": "jcs/rfc8785-v1",
+    "content_hash": "md5:e3b0c44298fc1c14"
   }
 }
