@@ -18,6 +18,7 @@
     "derived_metrics_allowed": true
   },
   "meta": {
+    "ids": { "hsi_id": "018e7615-e822-7eb0-ad5e-10598a9b9e11" },
     "provenance": {
       "sources": {
         "s_wear": {

@@ -26,6 +26,7 @@ HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY intro
 
 ### Changed
 
+- **Breaking (contract)**: `meta` is no longer optional for `hsi_version: "1.3"`; every payload MUST include `meta.ids.hsi_id` (UUID). Examples and `test-vectors/v1.3/minimal.json` updated accordingly.
 - **Breaking (contract)**: `axes` properties redefined as the closed 5-domain set above; 1.2's `engagement`, `behavior`, `context`, `emotion` are no longer recognized at the schema level for 1.3 payloads. Migration guidance in RFC-HSI-0010 §11.
 - **Breaking (contract)**: `direction: "higher_is_less"` is removed from the 1.3 enum in favor of `direction: "lower_is_more"`. 1.2 payloads continue to validate against `schema/hsi-1.2.schema.json` with the old name.
 

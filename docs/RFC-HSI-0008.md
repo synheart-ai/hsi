@@ -47,7 +47,7 @@ An HSI 1.2 payload is a single JSON object with:
 - `axes` (object, optional): axis readings grouped by domain.
 - `embeddings` (array, optional): embedding vectors scoped to windows.
 - `privacy` (object): privacy assertions.
-- `meta` (object, optional): additional non-normative metadata. `meta.provenance` is the canonical location for source maps and producer-level assembly metadata.
+- `meta` (object, optional): additional non-normative metadata. `meta.provenance` is the canonical location for source maps and producer-level assembly metadata. (HSI 1.3 makes `meta` required and adds required `meta.ids.hsi_id` as an RFC 4122 UUID per RFC-HSI-0010 §3.1; that rule applies only to payloads validated against `schema/hsi-1.3.schema.json`.)
 
 Top-level fields not listed above MUST be rejected; the schema enforces `additionalProperties: false` at the root.
 

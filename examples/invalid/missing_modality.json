@@ -33,6 +33,7 @@
     "derived_metrics_allowed": true
   },
   "meta": {
+    "ids": { "hsi_id": "068e7615-e822-7eb0-ad5e-10598a9b9e16" },
     "provenance": {
       "sources": {
         "s_wear": {

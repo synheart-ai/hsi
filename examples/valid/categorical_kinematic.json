@@ -35,6 +35,7 @@
     "derived_metrics_allowed": true
   },
   "meta": {
+    "ids": { "hsi_id": "b2d3c4e5-f6a7-4890-b1c2-d3e4f5a6b7c8" },
     "provenance": {
       "sources": {
         "watch_accel": {

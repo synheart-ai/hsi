@@ -38,6 +38,10 @@ This is a deliberate restructuring under HSI's pre-stable regime (`versioning.md
 - **RFC-HSI-0006** introduced `axes.context`. HSI 1.3 dissolves the `context` domain; runtime-context information lives in `meta.provenance` and `source` descriptors. See §11.5 for migration guidance.
 - **RFC-HSI-0009** adds the optional `integrity` block in HSI 1.3. This RFC is independent and additive over that work; both land in `schema/hsi-1.3.schema.json`.
 
+### 3.1 Document identity (`meta.ids.hsi_id`)
+
+HSI 1.3 requires the top-level `meta` object. Within it, `meta.ids` MUST be present and MUST include **`hsi_id`**: a string formatted as an **RFC 4122 UUID** identifying this HSI payload instance (document id). Producers SHOULD generate a new UUID per emitted payload (or per logical state update, per producer policy) so consumers can deduplicate, correlate logs, and join to out-of-band stores. Additional keys under `meta.ids` (for example subject or session identifiers) are permitted; only `hsi_id` is normative in the schema.
+
 ## 4. Canonical axis domains
 
 HSI 1.3 defines exactly five canonical axis domains. The schema's `additionalProperties: false` on the `axes` object enforces this set; adding a domain requires a schema update and a new RFC.

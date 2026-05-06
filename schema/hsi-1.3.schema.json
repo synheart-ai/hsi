@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
 
-  "$comment": "HSI 1.3 canonical schema. Adds the 5-axis canonical domain set (RFC-HSI-0010), per-channel `confidence_breakdown` on multimodal readings (RFC-HSI-0011), and the categorical reading shape. The 1.2 `source.source_tier` field is carried over unchanged — it captures architectural fidelity (Tier 1 = ground truth, Tier 4 = snapshot/minimal) which is orthogonal to the transient `source.quality` scalar. The earlier RFC-HSI-0011 draft of a per-modality `tiers` object on sources was rejected during 1.3 review (uncalibrated cap table, invented kinematic/digital ladders); per-channel attribution on multimodal readings is expressed via `axis_reading.confidence_breakdown` instead. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
+  "$comment": "HSI 1.3 canonical schema. Adds the 5-axis canonical domain set (RFC-HSI-0010), per-channel `confidence_breakdown` on multimodal readings (RFC-HSI-0011), the categorical reading shape, and required `meta.ids.hsi_id` (RFC 4122 UUID) for document-instance identity. The 1.2 `source.source_tier` field is carried over unchanged — it captures architectural fidelity (Tier 1 = ground truth, Tier 4 = snapshot/minimal) which is orthogonal to the transient `source.quality` scalar. The earlier RFC-HSI-0011 draft of a per-modality `tiers` object on sources was rejected during 1.3 review (uncalibrated cap table, invented kinematic/digital ladders); per-channel attribution on multimodal readings is expressed via `axis_reading.confidence_breakdown` instead. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
 
   "required": [
     "hsi_version",
@@ -13,7 +13,8 @@
     "computed_at_utc",
     "producer",
     "windows",
-    "privacy"
+    "privacy",
+    "meta"
   ],
 
   "properties": {
@@ -57,10 +58,25 @@
 
     "meta": {
       "type": "object",
+      "additionalProperties": true,
+      "required": ["ids"],
       "properties": {
+        "ids": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["hsi_id"],
+          "properties": {
+            "hsi_id": {
+              "type": "string",
+              "format": "uuid",
+              "$comment": "Unique identifier for this HSI payload instance (RFC 4122 UUID). Used for deduplication, logging, and cross-system correlation."
+            }
+          },
+          "$comment": "Stable document-level identifiers. `hsi_id` is required; producers MAY add other id keys (e.g. subject_id, session_id) under `ids`."
+        },
         "provenance": { "$ref": "#/$defs/provenance" }
       },
-      "$comment": "meta may include provenance and other producer-defined keys. meta.provenance is the canonical place for source tracking in this version."
+      "$comment": "Required in 1.3. `meta.ids.hsi_id` MUST be a UUID. `meta.provenance` is the canonical place for source tracking. Additional producer-defined keys are permitted."
     }
   },
 

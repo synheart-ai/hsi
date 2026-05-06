@@ -36,6 +36,7 @@
     "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "meta": {
+    "ids": { "hsi_id": "f6a7b8c9-d0e1-4234-f5a6-b7c8d9e0f1a2" },
     "illustrative_only": "integrity.content_hash is the well-known SHA-256 of the empty string, not a real canonicalized-payload hash. Validates BASIC + STRICT (which don't recompute) but would FAIL HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7). TODO: replace with a real hash once a reference INTEGRITY validator with a JCS canonicalizer is wired up.",
     "provenance": {
       "sources": {

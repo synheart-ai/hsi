@@ -27,6 +27,7 @@
     }
   },
   "meta": {
+    "ids": { "hsi_id": "a7b8c9d0-e1f2-4345-a6b7-c8d9e0f1a2b3" },
     "illustrative_only": "integrity.content_hash and integrity.signature.value are placeholders, not real cryptographic outputs. Validates BASIC + STRICT (which don't recompute or verify) but would FAIL HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7). TODO: regenerate with a real JCS canonicalizer + Ed25519 signing key once a reference INTEGRITY validator is wired up."
   }
 }

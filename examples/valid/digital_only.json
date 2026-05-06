@@ -43,6 +43,7 @@
     "derived_metrics_allowed": true
   },
   "meta": {
+    "ids": { "hsi_id": "a3bb189e-8bf9-3888-80ac-13b6232aa3a4" },
     "provenance": {
       "sources": {
         "desktop_os_events": {

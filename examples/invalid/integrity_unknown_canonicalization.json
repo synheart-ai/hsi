@@ -17,6 +17,9 @@
     "raw_biosignals_allowed": false,
     "derived_metrics_allowed": true
   },
+  "meta": {
+    "ids": { "hsi_id": "088e7615-e822-7eb0-ad5e-10598a9b9e18" }
+  },
   "integrity": {
     "canonicalization": "minify-then-sha256",
     "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"

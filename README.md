@@ -131,6 +131,7 @@ for human-state outputs — independent of devices, models, or vendors.
     "derived_metrics_allowed": true
   },
   "meta": {
+    "ids": { "hsi_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8" },
     "provenance": {
       "sources": {
         "s_wear":  { "type": "sensor", "quality": 0.9, "degraded": false, "source_tier": 2, "device_class": "watch", "signals": ["ppg","hrv"] },
