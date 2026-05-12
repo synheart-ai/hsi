@@ -1,0 +1,72 @@
+{
+  "hsi_version": "1.3",
+  "observed_at_utc": "2026-05-01T09:01:00Z",
+  "computed_at_utc": "2026-05-01T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.3.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-05-01T09:00:00Z",
+      "end_utc": "2026-05-01T09:01:00Z"
+    }
+  },
+  "axes": {
+    "cognitive": [
+      {
+        "name": "focus",
+        "score": 0.7,
+        "confidence": 0.78,
+        "direction": "higher_is_more",
+        "modalities_used": ["physiological", "kinematic", "digital"],
+        "confidence_breakdown": {
+          "physiological": 0.85,
+          "kinematic": 0.7,
+          "digital": 0.78
+        },
+        "inference_mode": "composite",
+        "model_id": "rulepack://focus_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["s_combo"]
+      }
+    ],
+    "affective": [
+      {
+        "name": "stress",
+        "score": 0.4,
+        "confidence": 0.6,
+        "direction": "lower_is_more",
+        "modalities_used": ["physiological", "digital"],
+        "confidence_breakdown": {
+          "physiological": 0.7
+        },
+        "inference_mode": "composite",
+        "model_id": "rulepack://stress_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["s_combo"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "ids": { "hsi_id": "1459cf9b-6a96-4f31-a9b8-fe4c65148de1" },
+    "provenance": {
+      "sources": {
+        "s_combo": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2,
+          "device_class": "watch",
+          "signals": ["ppg", "hrv", "accel", "touch"],
+          "transport": "ble"
+        }
+      }
+    }
+  }
+}

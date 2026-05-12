@@ -1,0 +1,52 @@
+{
+  "hsi_version": "1.3",
+  "observed_at_utc": "2026-05-01T09:01:00Z",
+  "computed_at_utc": "2026-05-01T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.3.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-05-01T09:00:00Z",
+      "end_utc": "2026-05-01T09:01:00Z"
+    }
+  },
+  "axes": {
+    "cognitive": [
+      {
+        "name": "focus",
+        "score": 0.7,
+        "confidence": 0.7,
+        "direction": "higher_is_more",
+        "modalities_used": ["physiological"],
+        "confidence_breakdown": {
+          "physiological": 0.8,
+          "digital": 0.6
+        },
+        "inference_mode": "composite",
+        "model_id": "rulepack://focus_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["s_wear"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "ids": { "hsi_id": "048e7615-e822-7eb0-ad5e-10598a9b9e14" },
+    "provenance": {
+      "sources": {
+        "s_wear": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2
+        }
+      }
+    }
+  }
+}

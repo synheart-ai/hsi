@@ -1,0 +1,52 @@
+{
+  "hsi_version": "1.3",
+  "observed_at_utc": "2026-05-01T09:01:00Z",
+  "computed_at_utc": "2026-05-01T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.3.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-05-01T09:00:00Z",
+      "end_utc": "2026-05-01T09:01:00Z"
+    }
+  },
+  "axes": {
+    "physiological": [
+      {
+        "name": "strain",
+        "score": 0.4,
+        "confidence": 0.6,
+        "direction": "higher_is_more",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://strain_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["s_wear"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "integrity": {
+    "canonicalization": "jcs/rfc8785-v1",
+    "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "meta": {
+    "ids": { "hsi_id": "110881e9-16da-4f34-bbd4-f95fc9f54dd0" },
+    "illustrative_only": "integrity.content_hash is the well-known SHA-256 of the empty string, not a real canonicalized-payload hash. Validates BASIC + STRICT (which don't recompute) but would FAIL HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7). TODO: replace with a real hash once a reference INTEGRITY validator with a JCS canonicalizer is wired up.",
+    "provenance": {
+      "sources": {
+        "s_wear": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2
+        }
+      }
+    }
+  }
+}

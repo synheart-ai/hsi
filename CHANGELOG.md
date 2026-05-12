@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY introduce breaking contract changes until `2.0`. See [`versioning.md`](versioning.md) for the full stability policy.
 
+## [1.3] - 2026-05-02
+
+### Added
+
+- Canonical validation schema `schema/hsi-1.3.schema.json` (RFC-HSI-0010 + RFC-HSI-0011 land together).
+- **Five-axis canonical domain set** (RFC-HSI-0010 §4): `axes` is closed via `additionalProperties: false` to `physiological`, `kinematic`, `digital`, `cognitive`, `affective`. The 1.2 domains `behavior`, `engagement`, `context`, and `emotion` are dissolved (mappings in RFC-HSI-0010 §11).
+- **Modality attribution by domain key** (RFC-HSI-0010 §5): `axis_reading` gains an optional `modalities_used` array (`uniqueItems`, `minItems: 1`, items drawn from `["physiological", "kinematic", "digital"]`). Required on every reading in `axes.cognitive[]` and `axes.affective[]`; forbidden on readings in the three single-modality domains. Schema enforces the required/forbidden split via `axes_domain_single_modality` / `axes_domain_multimodal`. Strict validator emits `HSI-1.3-MODALITIES-USED-MISSING` and `HSI-1.3-MODALITIES-USED-FORBIDDEN`.
+- **Categorical reading shape** (RFC-HSI-0010 §8): `direction` enum extended with `categorical`; new `label` (lowercase token) and `categories` (array, `uniqueItems`, `minItems: 2`). When `direction == "categorical"`, `label` and `categories` are required and `score` MUST be `null`; otherwise `label` and `categories` MUST be absent. Discriminator implemented via `if/then/else`. Strict validator enforces `label ∈ categories` (`HSI-1.3-CATEGORICAL-LABEL-IN-CATEGORIES`).
+- **Direction enum rename** (RFC-HSI-0010 §7): `lower_is_more` replaces 1.2's `higher_is_less`. 1.3 schemas reject `higher_is_less`; 1.2 schemas continue to accept it.
+- **Per-channel confidence breakdown on multimodal readings** (RFC-HSI-0011): optional `axis_reading.confidence_breakdown` object with optional `[0, 1]` values keyed by observable modality (`physiological`, `kinematic`, `digital`). `additionalProperties: false`, `minProperties: 1`. Permitted only on `axes.cognitive[]` and `axes.affective[]`; rejected on single-modality readings (the parent domain key already encodes the channel). Strict validator emits `HSI-1.3-CONFIDENCE-BREAKDOWN-FORBIDDEN` and `HSI-1.3-CONFIDENCE-BREAKDOWN-MISMATCH` (keys not subset of `modalities_used`). Additive on top of the carried-over `source.source_tier` field — the two are orthogonal: `source_tier` describes architectural channel fidelity at the source; `confidence_breakdown` describes the producer's per-channel inference confidence on a fused multimodal output. An earlier RFC-HSI-0011 draft replaced `source_tier` with a per-modality `tiers` object plus a normative cap table; that draft was rejected during 1.3 review for shipping uncalibrated cap values, inventing kinematic/digital tier ladders, and forcing a per-modality split on producers with single-purpose sources.
+- **Strict validator** path `tests/hsi_validate.py::_validate_strict_13` and dispatcher entry for `hsi_version: "1.3"`. Enforces the 1.2 STRICT carryovers (windows, evidence-source integrity on readings and embeddings, observed/computed ordering, dimension/vector consistency, null-score meta), the 1.3 axis-domain set, the modalities_used split, the categorical-label rule, the confidence_breakdown placement and key-subset rules, and defensive rejection of the rejected per-modality `tiers` object on sources. The §9 affective-availability rule is intentionally NOT enforced in 1.3 — it ships as a producer-policy SHOULD pending calibration.
+- **Optional payload integrity block** (RFC-HSI-0009): new top-level `integrity` object with required `canonicalization` (enum: `jcs/rfc8785-v1`) and `content_hash` (sha256 hex), optional `signature` (algorithm enum + `key_id` + `value`). `additionalProperties: false` on `integrity` and on `signature`. Producers that need tamper-evidence populate the block; consumers that don't care ignore it. HSI-VALIDATE-BASIC and HSI-VALIDATE-STRICT do NOT recompute the hash by default; HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7) is the verification tier.
+- New valid examples: `examples/valid/runtime_snapshot_1_3.json` (full 5-axis with categorical kinematic and multimodal cognitive/affective), `examples/valid/multimodal_cognitive.json`, `examples/valid/categorical_kinematic.json`, `examples/valid/digital_only.json`, `examples/valid/confidence_breakdown.json`.
+- New invalid examples: `examples/invalid/multimodal_without_modalities_used.json`, `examples/invalid/missing_modality.json` (modalities_used on a single-modality domain reading), `examples/invalid/categorical_score_conflict.json`, `examples/invalid/confidence_breakdown_on_single_modality.json`, `examples/invalid/confidence_breakdown_unknown_modality.json`, `examples/invalid/confidence_breakdown_mismatch.json`, `examples/invalid/source_tiers_object_in_1_3.json` (the rejected per-modality `tiers` object).
+- Valid example demonstrating the relaxed affective rule: `examples/valid/affective_digital_only_research.json` (digital-only `valence` reading from a sentiment-from-typing research producer; RFC-HSI-0010 §9 affective-availability is a producer-policy SHOULD in 1.3, not a MUST, so digital-only affective payloads validate at BASIC + STRICT).
+- Valid integrity examples: `examples/valid/integrity_basic.json` (`canonicalization` + `content_hash` only), `examples/valid/integrity_signed.json` (with detached `signature`).
+- Invalid integrity examples: `examples/invalid/integrity_unknown_canonicalization.json`, `examples/invalid/integrity_bad_hash.json` (wrong algorithm prefix / bad hex length).
+- 1.3 regression fixture under `test-vectors/v1.3/`.
+
+### Changed
+
+- **Breaking (contract)**: `meta` is no longer optional for `hsi_version: "1.3"`; every payload MUST include `meta.ids.hsi_id` (UUID). Examples and `test-vectors/v1.3/minimal.json` updated accordingly.
+- **Breaking (contract)**: `axes` properties redefined as the closed 5-domain set above; 1.2's `engagement`, `behavior`, `context`, `emotion` are no longer recognized at the schema level for 1.3 payloads. Migration guidance in RFC-HSI-0010 §11.
+- **Breaking (contract)**: `direction: "higher_is_less"` is removed from the 1.3 enum in favor of `direction: "lower_is_more"`. 1.2 payloads continue to validate against `schema/hsi-1.2.schema.json` with the old name.
+
+### Removed
+
+- `axes.engagement`, `axes.behavior`, `axes.context`, `axes.emotion` as canonical 1.3 domain keys (RFC-HSI-0010 §11). Members migrate per the §11.2–§11.5 mapping; affective members move out of the prefix convention (`emotion.stress` → `stress`).
+
 ## [1.2] - 2026-04-18
 
 ### Added
