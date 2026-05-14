@@ -1,4 +1,4 @@
-🌐 Official website: [synheart.ai](https://synheart.ai) — Human State Interface (HSI) infrastructure for developers and AI systems.
+🌐 [synheart.ai](https://synheart.ai) — Human State Interface (HSI) infrastructure for developers and AI systems.
 
 ## Human State Interface (HSI)
 
