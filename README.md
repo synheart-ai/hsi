@@ -1,3 +1,5 @@
+🌐 Official website: [synheart.ai](https://synheart.ai) — Human State Interface (HSI) infrastructure for developers and AI systems.
+
 ## Human State Interface (HSI)
 
 [![Version](https://img.shields.io/badge/version-1.3-blue.svg)](schema/hsi-1.3.schema.json)
@@ -226,5 +228,3 @@ No single implementation (including Synheart Core) defines HSI behavior.
 See the [Synheart Core documentation](https://docs.synheart.ai) for complete integration guides.
 
 ---
-
-
