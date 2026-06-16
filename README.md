@@ -230,8 +230,8 @@ the specification:
 
 ```bibtex
 @misc{hsi,
-  title        = {{Human State Interface (HSI)}: An Open Specification for Human-State Outputs},
-  author       = {{Synheart}},
+  title        = {The Human State Interface ({HSI}): A Canonical Contract for Interoperable Human-State Systems},
+  author       = {{Synheart AI Inc.}},
   year         = {2025},
   howpublished = {\url{https://github.com/synheart-ai/hsi}},
   note         = {Open specification (Apache-2.0), JSON Schema v1.3}
