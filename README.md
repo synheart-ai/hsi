@@ -225,6 +225,24 @@ HSI evolves through a lightweight RFC process.
 No single implementation (including Synheart Core) defines HSI behavior.
 
 
+## Citing HSI
+
+If you use the Human State Interface in academic or technical work, please cite
+the specification:
+
+```bibtex
+@misc{hsi,
+  title        = {The Human State Interface ({HSI}): A Canonical Contract for Interoperable Human-State Systems},
+  author       = {{Synheart AI Inc.}},
+  year         = {2025},
+  howpublished = {\url{https://github.com/synheart-ai/hsi}},
+  note         = {Open specification (Apache-2.0), JSON Schema v1.3}
+}
+```
+
+Please cite the specific version you build against (e.g. HSI 1.3); breaking
+changes bump `hsi_version`.
+
 See the [Synheart Core documentation](https://docs.synheart.ai) for complete integration guides.
 
 ---
