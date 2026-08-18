@@ -47,6 +47,34 @@ Without a standard interface:
 HSI solves this by defining a **stable, implementation-agnostic interface**
 for human-state outputs — independent of devices, models, or vendors.
 
+### Specification status
+
+The schema can move ahead of the RFC paperwork while the contract is pre-stable, so
+the current state of each document is listed explicitly rather than implied.
+
+| RFC | Defines | Status | In schema | Strict validator | Examples |
+| --- | --- | --- | --- | --- | --- |
+| [RFC-0005](docs/RFC-0005-hsi-canonical-contract.md) | 1.0 canonical contract | Accepted | `hsi-1.0.schema.json` | yes | yes |
+| [RFC-HSI-0006](docs/RFC-HSI-0006.md) | 1.1 context domain, provenance guidance | Accepted | `hsi-1.1.schema.json` | yes | yes |
+| [RFC-HSI-0007](docs/RFC-HSI-0007.md) | 1.2 emotion head | Superseded by RFC-HSI-0008 | — | — | — |
+| [RFC-HSI-0008](docs/RFC-HSI-0008.md) | 1.2 canonical contract | Accepted | `hsi-1.2.schema.json` | yes | yes |
+| [RFC-HSI-0010](docs/RFC-HSI-0010.md) | 1.3 five-axis domain set, modality model | Accepted | `hsi-1.3.schema.json` | yes | yes |
+| [RFC-HSI-0011](docs/RFC-HSI-0011.md) | 1.3 per-channel confidence breakdown | Accepted | `hsi-1.3.schema.json` | yes | yes |
+| [RFC-HSI-0009](docs/RFC-HSI-0009.md) | 1.3 optional payload integrity block | **Draft** — open questions in §9 | `hsi-1.3.schema.json` (provisional) | **not implemented** | shape only |
+
+Two consequences worth reading before building against 1.3:
+
+- **The `integrity` block is provisional.** It is present in the 1.3 schema so its shape
+  can be validated, but RFC-HSI-0009 is still Draft. Its canonicalization enum, hash
+  agility, signature form and strict-mode default may change before 1.3 is finalized.
+- **`HSI-VALIDATE-INTEGRITY` has no reference implementation.** `tests/hsi_validate.py`
+  implements BASIC and STRICT; it does not recompute `content_hash` and does not verify
+  signatures. A consumer needing tamper-evidence must supply its own canonicalizer and
+  trust policy.
+
+HSI is pre-stable: minor versions MAY introduce breaking contract changes until `2.0`.
+See [`versioning.md`](versioning.md).
+
 ### What HSI is
 
 - A **standardized interface contract** for human-state outputs

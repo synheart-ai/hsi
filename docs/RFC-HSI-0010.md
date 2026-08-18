@@ -2,7 +2,8 @@
 
 ## HSI 1.3 — Canonical 5-Axis Domain Set and Modality Model
 
-- **Status**: Draft
+- **Status**: Accepted
+- **Accepted**: 2026-05-02 (shipped in HSI 1.3; see `CHANGELOG.md`)
 - **Type**: Minor (breaking under pre-stable; see `versioning.md`)
 - **Target**: HSI 1.3
 - **Owner**: HSI Maintainers

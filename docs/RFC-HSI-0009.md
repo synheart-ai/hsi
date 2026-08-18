@@ -102,6 +102,8 @@ The signed artifact is deliberately `content_hash` and not the canonicalized pay
 - **HSI-VALIDATE-STRICT**: MAY add an optional check — if `integrity.content_hash` is present, strict validation SHOULD recompute and compare. Gated behind a strict-mode flag since it requires a canonicalization library.
 - **HSI-VALIDATE-INTEGRITY** (new tier): verifies `content_hash` (and `signature`, if present) with a working canonicalizer and trust policy. Consumers requiring tamper-evidence SHOULD target this tier.
 
+> **Implementation status.** `tests/hsi_validate.py` implements BASIC and STRICT only. It does not recompute `content_hash` and does not verify signatures, so HSI-VALIDATE-INTEGRITY currently has no reference implementation. A consumer that needs tamper-evidence today must supply its own canonicalizer and trust policy.
+
 ## 8. Migration
 
 - HSI 1.2 producers: no change required.
@@ -120,4 +122,12 @@ Before promoting this RFC to Accepted:
 
 ## 10. Canonical schema
 
-When this RFC is accepted, the `integrity` block will be added to `schema/hsi-1.3.schema.json`. No changes to `schema/hsi-1.2.schema.json` are required; 1.2 payloads remain valid and MAY continue to be emitted in parallel.
+The `integrity` block ships in `schema/hsi-1.3.schema.json` ahead of this RFC's
+acceptance, so that producers can populate it and consumers can validate its shape
+while the questions in §9 are settled. Until this RFC is Accepted, treat the block's
+semantics as provisional: the field set is stable enough to emit against, but the
+canonicalization enum, hash agility, signature form and strict-mode default may change
+before 1.3 is finalized.
+
+No changes to `schema/hsi-1.2.schema.json` are required; 1.2 payloads remain valid and
+MAY continue to be emitted in parallel.
