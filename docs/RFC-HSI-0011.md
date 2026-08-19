@@ -2,7 +2,8 @@
 
 ## HSI 1.3 — Per-Channel Confidence Breakdown on Multimodal Readings
 
-- **Status**: Draft (revised; supersedes the earlier per-modality `tiers` design)
+- **Status**: Accepted (supersedes the earlier per-modality `tiers` design)
+- **Accepted**: 2026-05-02 (shipped in HSI 1.3; see `CHANGELOG.md`)
 - **Type**: Minor (additive)
 - **Target**: HSI 1.3
 - **Owner**: HSI Maintainers
