@@ -79,7 +79,7 @@ See [`versioning.md`](versioning.md).
 
 - A **standardized interface contract** for human-state outputs
 - A **canonical JSON representation** with explicit temporal scope
-- A **versioned schema** with forward-compatibility guarantees
+- A **versioned schema** with an explicit compatibility policy — pre-stable until `2.0`, per [`versioning.md`](versioning.md)
 - A **shared structure** for domains and axis readings (without assuming a closed vocabulary of axis names)
 
 
@@ -94,7 +94,9 @@ See [`versioning.md`](versioning.md).
 
 - **Producer**: generates an HSI payload from any internal logic (models, heuristics, sensors, annotations) and MUST emit payloads that validate against the referenced schema for the claimed `hsi_version`.
 - **Consumer**: validates and interprets an HSI payload. Consumers MUST treat HSI as an interface contract and MUST NOT assume the producer’s implementation details.
->Consumers MUST treat unknown fields as forward-compatible extensions
+
+> **Unknown-field handling** (normative rule in [`versioning.md`](versioning.md)): consumers MUST tolerate unknown axis *names* within a known domain, and MUST NOT treat them as schema violations. Unknown *top-level fields* are the opposite case: the published schemas are closed (`additionalProperties: false`), so an unrecognized field means a payload from a version the consumer does not speak — handled by dispatching on `hsi_version` and validating against that version's schema, never by ignoring the field.
+
 ### Specification entry points
 
 - **Canonical RFCs (HSI 1.3)**:
