@@ -182,7 +182,7 @@ See `examples/valid/runtime_snapshot_1_3.json` for a full payload exercising all
 - **Modality attribution**: readings in `axes.cognitive[]` and `axes.affective[]` MUST include `modalities_used` (array of `physiological` / `kinematic` / `digital`). Single-modality readings MUST NOT — the parent domain key already encodes the channel.
 - **Per-channel confidence (optional)**: multimodal readings MAY carry `axis_reading.confidence_breakdown` mapping each contributing modality to a `[0, 1]` confidence value, capturing the producer's certainty in each channel's contribution to the fused output (RFC-HSI-0011). Provisional in 1.3.
 - **Categorical readings**: when `direction: "categorical"`, the reading carries `label` + `categories` and `score` MUST be `null` (RFC-HSI-0010 §8). Use for kinematic class outputs (`activity_state`, `postural_state`, `locomotion_state`).
-- **Source descriptors**: each entry in `meta.provenance.sources` carries `type`, `quality`, `degraded`, optional `source_tier` (architectural fidelity 1–4, carried over from 1.2), and the PR #5 descriptors (`device_class`, `signals`, `transport`, `vendor`). Non-empty `evidence_source_ids` SHOULD reference these keys.
+- **Source descriptors**: each entry in `meta.provenance.sources` carries `type`, `quality`, `degraded`, optional `source_tier` (architectural fidelity 1–4, carried over from 1.2), and the optional descriptors (`device_class`, `signals`, `transport`, `vendor`). Non-empty `evidence_source_ids` SHOULD reference these keys.
 - **Null readings**: a producer MAY include an axis reading with `score: null` when the reading is unavailable. A null score MUST be accompanied by a `meta` explanation and MUST NOT be interpreted as zero. Categorical readings have structurally null `score` and do not require additional explanation.
 - **Embeddings**: if `embeddings[]` is present, each embedding includes `dimension`, `encoding`, and `confidence`, and includes at least one of `vector` and/or `vector_hash`. Consumers MUST NOT assume vectors are always present.
 - **Integrity block (optional)**: producers needing tamper-evidence MAY include a top-level `integrity` object with `canonicalization` + `content_hash` (and optional detached `signature`) per RFC-HSI-0009. Reference BASIC and STRICT validators don't recompute the hash — that's the HSI-VALIDATE-INTEGRITY tier.
@@ -232,8 +232,6 @@ not a requirement. It includes:
 - **Multi-Modal Data Collection**: Wearables, phone sensors, and behavioral signals
 - **Privacy-First**: Zero raw data, consent-gated, capability-based
 - **Multi-Platform**: Flutter/Dart, Android/Kotlin, iOS/Swift
-
-📦 **Repository**: [Synheart Core](https://github.com/synheart-ai/synheart-core)
 
 #### Platform SDKs
 

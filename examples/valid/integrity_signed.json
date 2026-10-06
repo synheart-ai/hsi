@@ -19,7 +19,7 @@
   },
   "integrity": {
     "canonicalization": "jcs/rfc8785-v1",
-    "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "content_hash": "sha256:81736678b1dd3412fa03d412f523c8660b11b2143f80bb9b7abceb2bec63b0a3",
     "signature": {
       "algorithm": "ed25519",
       "key_id": "did:example:producer#key-1",
@@ -28,6 +28,6 @@
   },
   "meta": {
     "ids": { "hsi_id": "a7b8c9d0-e1f2-4345-a6b7-c8d9e0f1a2b3" },
-    "illustrative_only": "integrity.content_hash and integrity.signature.value are placeholders, not real cryptographic outputs. Validates BASIC + STRICT (which don't recompute or verify) but would FAIL HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7). TODO: regenerate with a real JCS canonicalizer + Ed25519 signing key once a reference INTEGRITY validator is wired up."
+    "illustrative_only": "signature.value is a placeholder and does not verify; integrity.content_hash is computed per RFC-HSI-0009 §4."
   }
 }

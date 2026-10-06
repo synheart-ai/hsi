@@ -55,7 +55,7 @@ Producers MUST place inference/baseline provenance in `meta.provenance`, for exa
       "baseline_status": "READY",
       "srm_snapshot_id": "…",
       "inference_mode": "deterministic|probabilistic|composite",
-      "providers": [{ "id": "synheart-focus", "version": "x.y.z" }]
+      "providers": [{ "id": "example-focus-provider", "version": "x.y.z" }]
     }
   }
 }

@@ -41,7 +41,7 @@
     "provenance": {
       "baseline_status": "WARMING",
       "providers": [{ "id": "synheart-behavior", "version": "1.0.0" }],
-      "engine": "synheart-flux",
+      "engine": "example-engine",
       "engine_version": "1.0.0"
     }
   }

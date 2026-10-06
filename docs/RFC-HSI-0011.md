@@ -8,7 +8,7 @@
 - **Target**: HSI 1.3
 - **Owner**: HSI Maintainers
 - **Paired with**: RFC-HSI-0010 (5-axis canonical domain set and modality model). The observable modalities this RFC uses (`physiological`, `kinematic`, `digital`) are defined by RFC-HSI-0010 §6.
-- **Depends on**: PR #5 against `synheart-ai/hsi` (1.2 source descriptors). PR #5 MUST land before the 1.3 schema PR.
+- **Depends on**: HSI 1.2 source descriptors (RFC-HSI-0008 §7).
 - **Relates to**: RFC-HSI-0008 (HSI 1.2 canonical contract), RFC-HSI-0009 (HSI 1.3 integrity block, independent)
 - **Canonical schema**: `schema/hsi-1.3.schema.json` (added when this RFC and RFC-HSI-0010 are Accepted)
 
@@ -31,7 +31,7 @@ HSI 1.3 introduces an optional **`confidence_breakdown`** field on multimodal ax
 }
 ```
 
-`confidence_breakdown` is **additive on top of the carried-over `source.source_tier` field** (RFC-HSI-0008 §6.7, unchanged from HSI 1.2 post-PR #5). The two solve different problems: `source.source_tier` describes *architectural* fidelity of an input channel ("Tier 1 = ground-truth RR intervals; Tier 4 = single HR snapshot") and lives on the source descriptor; `confidence_breakdown` describes *per-channel inference confidence on a fused multimodal reading* and lives inline on the reading. A reading can — and typically does — have both:
+`confidence_breakdown` is **additive on top of the carried-over `source.source_tier` field** (RFC-HSI-0008 §6.7, unchanged from HSI 1.2). The two solve different problems: `source.source_tier` describes *architectural* fidelity of an input channel ("Tier 1 = ground-truth RR intervals; Tier 4 = single HR snapshot") and lives on the source descriptor; `confidence_breakdown` describes *per-channel inference confidence on a fused multimodal reading* and lives inline on the reading. A reading can — and typically does — have both:
 
 - The source-level `source_tier` tells consumers what fidelity ceiling the input channel can ever hit.
 - The reading-level `confidence_breakdown` tells consumers how confident the producer was in each channel's contribution to *this specific multimodal output*.
@@ -47,13 +47,13 @@ The carried-over `source.source_tier` integer (1.2 shape) avoids all five proble
 
 ## 2. Non-goals
 
-- **Redesigning `source.source_tier`.** The 1.2 (post-PR #5) `source.source_tier` integer (1–4) is carried over to 1.3 unchanged in name, shape, and meaning. RFC-HSI-0008 §6.7 remains its authoritative definition. This RFC neither redefines it nor introduces a per-modality replacement; the per-modality `tiers` object explored in an earlier draft was rejected (§1).
+- **Redesigning `source.source_tier`.** The 1.2 `source.source_tier` integer (1–4) is carried over to 1.3 unchanged in name, shape, and meaning. RFC-HSI-0008 §6.7 remains its authoritative definition. This RFC neither redefines it nor introduces a per-modality replacement; the per-modality `tiers` object explored in an earlier draft was rejected (§1).
 - **A normative fusion policy.** Producers that emit `confidence_breakdown` are expressing how they decomposed their fused confidence; this RFC does not specify how the breakdown components are combined into the overall `confidence` value. That is a producer-internal decision documented in `meta.provenance.engine_version`.
 - **Single-modality readings.** Readings in `axes.physiological[]`, `axes.kinematic[]`, `axes.digital[]` do not carry `confidence_breakdown` — there is only one contributing modality and the parent domain key already encodes it. The schema rejects `confidence_breakdown` on single-modality readings.
 
 ## 3. Relation to prior RFCs
 
-- **RFC-HSI-0008** §6.7 (post-PR #5) defines `source_tier` (integer 1–4) on `meta.provenance.sources[*]`. **HSI 1.3 carries that field over unchanged** — same name, same shape, same physiology-flavored tier table. RFC-HSI-0008 §6.7 remains the authoritative definition. The earlier idea of replacing `source_tier` with a per-modality `tiers` object was rejected (§1) and is not part of 1.3.
+- **RFC-HSI-0008** §6.7 defines `source_tier` (integer 1–4) on `meta.provenance.sources[*]`. **HSI 1.3 carries that field over unchanged** — same name, same shape, same physiology-flavored tier table. RFC-HSI-0008 §6.7 remains the authoritative definition. The earlier idea of replacing `source_tier` with a per-modality `tiers` object was rejected (§1) and is not part of 1.3.
 - **RFC-HSI-0010** introduces the 5-axis canonical domain set and `modalities_used` on multimodal axis_readings. The keys of `confidence_breakdown` are exactly the three observable modalities defined in RFC-HSI-0010 §6 (`physiological`, `kinematic`, `digital`); the fourth canonical modality `multimodal` is a fusion outcome and has no breakdown of its own.
 - **RFC-HSI-0009** is independent. Both this RFC and RFC-HSI-0009 land in `schema/hsi-1.3.schema.json`.
 
@@ -110,7 +110,7 @@ Schema-level placement (multimodal-only) is enforced via `axes_domain_single_mod
 
 ### 5.3 Field removals
 
-None at the source level. `meta.provenance.sources[*].source_tier` and `$defs/source_tier` are carried over from HSI 1.2 (post-PR #5) unchanged.
+None at the source level. `meta.provenance.sources[*].source_tier` and `$defs/source_tier` are carried over from HSI 1.2 unchanged.
 
 The 1.2 schema (`schema/hsi-1.2.schema.json`) is unchanged; 1.2 payloads continue to validate against it.
 
@@ -154,14 +154,12 @@ Producers and consumers SHOULD migrate together on a per-`hsi_version` basis (RF
 - **Producer adoption.** A producer using a learned multimodal model often *cannot* produce a meaningful per-channel breakdown (the model's internal weights aren't channel-separable). A producer using a rulepack with explicit per-channel weighting can. If most 1.3 producers are in the first camp, `confidence_breakdown` ends up sparsely populated and consumers can't rely on it.
 - **Consumer demand.** Without a calibrated per-channel cap policy (deliberately deferred — see RFC-HSI-0011 §1's rejection of the original `tiers` cap table), consumers have no normative use for the breakdown values. If no real consumer reads them within the 1.3 → 1.4 window, the field is dead surface.
 
-**1.4 revisit decision rule:** if at least one canonical producer (synheart-flux or another) populates `confidence_breakdown` consistently and at least one canonical consumer reads it for a real downstream policy, keep the field. Otherwise, deprecate in 1.4 and remove in 1.5.
+**1.4 revisit decision rule:** if at least one producer populates `confidence_breakdown` consistently and at least one consumer reads it for a real downstream policy, keep the field. Otherwise, deprecate in 1.4 and remove in 1.5.
 
-## 10. Open questions
+## 10. Resolved questions
 
-Before promoting this RFC to Accepted:
-
-- **Subset rule strictness.** §4.3 / §6 enforce `confidence_breakdown.keys() ⊆ modalities_used`. Should the reverse also be required (every `modalities_used` channel MUST appear in `confidence_breakdown`)? Current draft permits a producer to list a channel in `modalities_used` without separately attributing confidence to it (the channel contributed but without a numeric breakdown). Stricter rule simplifies consumer parsing; current rule is more honest about producer capability.
-- **Future categorical tiers.** §2 defers categorical fidelity tiers to a future RFC pending calibration data. Should we reserve a `tiers` key on `meta.provenance.sources[*]` now (as a no-value-yet placeholder) to ease the future addition, or leave the source descriptor clean and accept that adding `tiers` later will be a minor schema change?
+- **Subset rule strictness**: only `confidence_breakdown` keys ⊆ `modalities_used` is enforced (§4.3, §6). A producer MAY list a contributing channel in `modalities_used` without attributing a separate confidence to it.
+- **Categorical or per-modality fidelity tiers**: no placeholder is reserved on source descriptors. Any future addition will be specified by its own RFC.
 
 ## 11. Canonical schema
 
