@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY introduce breaking contract changes until `2.0`. See [`versioning.md`](versioning.md) for the full stability policy.
 
+## [Unreleased]
+
+### Proposed
+
+- RFC-HSI-0012 (Draft) for HSI 1.4. It adds per-reading `status`, `reason`, `basis` and `valid_until`, plus an optional `meta.context` frame with observed / inferred / stated sources. Abstaining readings get a legal wire shape (no silent omission), and `confidence_breakdown` is deprecated per RFC-HSI-0011 §9. No schema change yet.
+
 ## [1.3] - 2026-05-02
 
 ### Added

@@ -61,6 +61,7 @@ the current state of each document is listed explicitly rather than implied.
 | [RFC-HSI-0010](docs/RFC-HSI-0010.md) | 1.3 five-axis domain set, modality model | Accepted | `hsi-1.3.schema.json` | yes | yes |
 | [RFC-HSI-0011](docs/RFC-HSI-0011.md) | 1.3 per-channel confidence breakdown | Accepted | `hsi-1.3.schema.json` | yes | yes |
 | [RFC-HSI-0009](docs/RFC-HSI-0009.md) | 1.3 optional payload integrity block | **Draft** — open questions in §9 | `hsi-1.3.schema.json` (provisional) | **not implemented** | shape only |
+| [RFC-HSI-0012](docs/RFC-HSI-0012.md) | 1.4 reading status, reason, basis, freshness; context frame; deprecates `confidence_breakdown` | **Draft** — open questions in §13 | — | — | — |
 
 Two consequences worth reading before building against 1.3:
 
