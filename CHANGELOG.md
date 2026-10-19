@@ -9,7 +9,7 @@ HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY intro
 
 ### Proposed
 
-- RFC-HSI-0012 (Draft) for HSI 1.4. It adds per-reading `status`, `reason`, `basis` and `valid_until`, plus an optional `meta.context` frame with observed / inferred / stated sources. Abstaining readings get a legal wire shape (no silent omission), and `confidence_breakdown` is deprecated per RFC-HSI-0011 §9. No schema change yet.
+- RFC-HSI-0012 (Draft) for HSI 1.4. It adds per-reading `status`, `reason`, `basis` and `valid_until`, plus an optional `meta.context` frame with observed / inferred / stated sources. Abstaining readings get a legal wire shape (no silent omission), and `confidence_breakdown` is deprecated per RFC-HSI-0011 §9. Self-reported values get a `stated` status. No schema change yet.
 
 ## [1.3] - 2026-05-02
 

@@ -115,7 +115,7 @@ All of these live on `axis_reading`.
 ```json
 "status": {
   "type": "string",
-  "enum": ["estimated", "insufficient_evidence", "stale", "withheld", "corrected"]
+  "enum": ["estimated", "insufficient_evidence", "stale", "withheld", "stated"]
 }
 ```
 
@@ -125,7 +125,7 @@ All of these live on `axis_reading`.
 | `insufficient_evidence` | The producer is configured to emit this member and tried, but could not estimate it this window. | `null` | `0` |
 | `stale` | The producer is re-publishing its most recent estimate after that estimate's `valid_until` has passed, because nothing newer exists. | prior value, or `null` | prior value |
 | `withheld` | The producer could estimate this member, but the consumer is not permitted to receive it. | `null` | `0` |
-| `corrected` | The person stated a value for this member and window, and it replaces the estimate. | stated value | see §5.1.2 |
+| `stated` | The person stated a value for this member and window, either correcting an estimate or reporting one where none exists. | stated value | see §5.1.2 |
 
 #### 5.1.1 `withheld` discloses existence only
 
@@ -139,10 +139,19 @@ Producers SHOULD emit `withheld` only for members the consumer asked for. They S
 NOT list every member the consumer is denied, because that publishes the producer's full
 capability set to every consumer.
 
-#### 5.1.2 `corrected`
+A `withheld` reading also tells the consumer that the person declined. Where the consumer
+holds power over the person, such as an employer, that disclosure can itself become
+pressure. Whether a denial is shown as `withheld` or as omission is therefore decided by
+the consent system on the person's behalf, not by the consumer. Producers SHOULD default
+to omission for consumers acting for an organization rather than for the person.
 
-A `corrected` reading reflects the person's own statement for the window the reading
-covers, for example a self-report saying they are not stressed. Rules:
+#### 5.1.2 `stated`
+
+A `stated` reading carries the person's own statement for the window the reading covers.
+It covers two cases: a correction of an estimate (for example, "I am not stressed") and a
+standalone report where no estimate exists (for example, a questionnaire rating). 1.3 has
+no legal shape for the second case: self-report is a source type but not a modality, so a
+multimodal reading backed only by self-report must name a channel it did not use. Rules:
 
 - `model_id` uses a new reserved scheme, `stated://` (for example
   `stated://self-report`). This RFC adds it to the reserved list beside `model://`,
@@ -150,8 +159,10 @@ covers, for example a self-report saying they are not stressed. Rules:
 - `inference_mode` is `external_provider`.
 - `confidence` is the producer's trust in the statement. A producer that takes
   statements at face value uses `1`.
-- A consumer holding both an `estimated` and a `corrected` reading for the same member
-  and window MUST prefer the `corrected` one.
+- `modalities_used` MAY be absent, because a statement is not observed through a channel.
+  Its source SHOULD be a `meta.provenance.sources` entry with `type: self_report`.
+- A consumer holding both an `estimated` and a `stated` reading for the same member
+  and window MUST prefer the `stated` one.
 
 ### 5.2 `reason`
 
@@ -178,7 +189,7 @@ covers, for example a self-report saying they are not stressed. Rules:
 Rules:
 
 - `reason` is REQUIRED when `status` is `insufficient_evidence`, `stale` or `withheld`,
-  and MUST be absent when `status` is `estimated` or `corrected`.
+  and MUST be absent when `status` is `estimated` or `stated`.
 - `reason_detail` is an OPTIONAL producer-defined token that keeps a more specific cause
   than the `reason` enum (for example `device_off_body`). It MUST NOT appear on
   `withheld` readings. Consumers MUST NOT branch on `reason_detail` values; they are not
@@ -232,7 +243,7 @@ Rules:
 | `insufficient_evidence` | `null` | `0` | required | MAY | MAY (the sources that were tried) | MAY be absent |
 | `stale` | prior or `null` | prior | required | SHOULD | prior | required if `score` non-null |
 | `withheld` | `null` | `0` | `not_granted` | absent | `[]` | absent |
-| `corrected` | required non-null (categorical: `label`) | any | absent | MAY | MAY | MAY be absent |
+| `stated` | required non-null (categorical: `label`) | any | absent | MAY | MAY | MAY be absent |
 
 ### 5.6 No silent omission
 
@@ -272,8 +283,8 @@ discriminator:
    and `basis`, `reason_detail`, `confidence_breakdown`, `label`, `notes` and
    `modalities_used` are forbidden.
 3. `status == stale` ⇒ `reason` required.
-4. `status ∈ {estimated, corrected}` or absent ⇒ `reason` and `reason_detail` forbidden.
-5. `status ∈ {estimated, corrected}` and `direction != categorical` ⇒ `score` non-null.
+4. `status ∈ {estimated, stated}` or absent ⇒ `reason` and `reason_detail` forbidden.
+5. `status ∈ {estimated, stated}` and `direction != categorical` ⇒ `score` non-null.
 6. `reason == not_granted` ⇒ `status == withheld`. `reason ∈ {warming, not_trained, not_applicable}` ⇒ `status == insufficient_evidence`.
 
 ### 6.4 Tightening: a null score needs a status
@@ -289,8 +300,8 @@ against the 1.3 schema.
 ### 6.5 Relaxing `modalities_used` for readings without an estimate
 
 `axes_domain_multimodal` keeps `modalities_used` required, except when
-`status ∈ {insufficient_evidence, withheld, corrected}`, or when `status == stale` with
-`score: null`. On `insufficient_evidence` and `corrected` it MAY still be present (the
+`status ∈ {insufficient_evidence, withheld, stated}`, or when `status == stale` with
+`score: null`. On `insufficient_evidence` and `stated` it MAY still be present (the
 channels that were tried, or none). On `withheld` it is forbidden (§5.1.1).
 
 The single-modality domains are unchanged: `modalities_used` and `confidence_breakdown`
@@ -299,7 +310,7 @@ stay forbidden there.
 ### 6.6 Categorical readings that abstain
 
 The 1.3 categorical discriminator requires `label` whenever `direction == categorical`.
-1.4 requires `label` only when `status` is `estimated`, `corrected` or absent, or is
+1.4 requires `label` only when `status` is `estimated`, `stated` or absent, or is
 `stale` with a prior label. On `insufficient_evidence` and `withheld`, `label` MUST be
 absent. `categories` MAY stay on `insufficient_evidence` so consumers know the
 vocabulary, and is forbidden on `withheld`.
@@ -316,7 +327,7 @@ Checks the schema cannot express:
 | --- | --- |
 | `HSI-1.4-VALID-UNTIL-ORDER` | `valid_until > computed_at_utc` unless `status == stale` |
 | `HSI-1.4-STALE-NOT-EXPIRED` | `status == stale` with `valid_until ≥ computed_at_utc` |
-| `HSI-1.4-DUPLICATE-MEMBER` | Two readings for the same member in one domain with overlapping `window_ids`, unless exactly one is `corrected` |
+| `HSI-1.4-DUPLICATE-MEMBER` | Two readings for the same member in one domain with overlapping `window_ids`, unless exactly one is `stated` |
 | `HSI-1.4-CONTEXT-UNKNOWN-WINDOW` | A `meta.context` key that is not a key of `windows` |
 | `HSI-1.4-CONTEXT-CONFIDENCE-MISSING` | A context field with `source: inferred` and no `confidence` |
 
@@ -403,7 +414,7 @@ Common reasons a producer cannot estimate a reading, and how each maps to 1.4:
 | Member not meaningful under intermittent sampling or the current device placement | `insufficient_evidence` / `not_applicable` |
 | Estimator not enabled in this deployment | not emitted (outside the configured set, §5.6) |
 | Consumer not permitted to receive the member | `withheld` / `not_granted` |
-| Person corrected the estimate | `corrected` with a `stated://` `model_id` |
+| Person corrected the estimate, or reported a value with no estimate | `stated` with a `stated://` `model_id` |
 
 Producers that already report omission reasons under a private `meta` key SHOULD move
 them onto the readings when they emit 1.4. They MAY keep the private key on 1.3 payloads.
@@ -424,7 +435,7 @@ before 1.5 is cut, the deprecation is reversed by a new RFC.
 **Consumers that act on state** (for example, adapting how an assistant responds). Use a
 reading to drive behaviour only when all of the following hold:
 
-- `status ∈ {estimated, corrected}`;
+- `status ∈ {estimated, stated}`;
 - `valid_until` has not passed;
 - `basis ∈ {personal_stratum, personal_pooled}`, or `fixed_scale` for members the
   consumer has decided are meaningful on a fixed scale;
@@ -436,7 +447,7 @@ you" (`not_granted`), and explain which one applies instead of a generic "unavai
 
 **Consumers that display state.** Show `reason` in plain words, for example "Still
 learning your baseline" or "Not shared with this app". Never show a number for a reading
-that is not `estimated` or `corrected`. Show `basis` as "compared with your usual" versus
+that is not `estimated` or `stated`. Show `basis` as "compared with your usual" versus
 "compared with people in general".
 
 **Libraries and SDKs.** Expose `status`, `reason`, `basis` and `valid_until` as typed
@@ -461,7 +472,7 @@ The 1.4 schema PR ships with:
   - `status_insufficient_evidence_multimodal.json` (no `modalities_used`);
   - `status_withheld.json`;
   - `status_stale.json`;
-  - `status_corrected.json`;
+  - `status_stated.json`;
   - `basis_mixed.json` (personal and population readings in one payload);
   - `context_frame.json`;
   - `categorical_insufficient_evidence.json`.
@@ -506,22 +517,41 @@ Producer conformance, which a producer claiming 1.4 SHOULD demonstrate:
    everywhere lets consumers branch on one field instead of inferring `estimated` from
    absence. The cost is one field per reading for every producer. Pre-stable rules allow
    either.
+   *Proposed resolution:* require it on every reading.
 2. **Should `withheld` exist on the wire?** It tells a consumer that a member exists
-   (§5.1.1). The alternative is omission, which brings back the ambiguity in §2.1. The
-   draft keeps `withheld`, limited to members the consumer asked for.
-3. **`corrected` confidence.** Should a statement always carry `confidence: 1`, or may a
-   producer discount statements that contradict strong evidence? The draft leaves it to
-   the producer (§5.1.2).
+   (§5.1.1). The alternative is omission, which brings back the ambiguity in §2.1.
+   *Proposed resolution:* keep `withheld`, limited to members the consumer asked for, with
+   visibility of the denial decided by the consent system (§5.1.1).
+3. **`stated` confidence.** Should a statement always carry `confidence: 1`, or may a
+   producer discount statements that contradict strong evidence?
+   *Proposed resolution:* default to `1`. A producer MAY discount, and consumers still
+   prefer `stated` readings (§5.1.2).
 4. **Context vocabularies.** Should the five canonical context fields have closed value
    enums in the schema, or stay open tokens with an appendix as drafted?
+   *Proposed resolution:* closed enums for the five canonical fields. Context is the most
+   identifying part of a payload, and the token pattern still admits values such as
+   product names. Extensions use non-canonical field names.
 5. **`fixed_scale` naming.** The alternative is `absolute`. `fixed_scale` was chosen
    because these scores are still normalized onto `[0, 1]`, just not against a person
    or a population.
 6. **`baseline_status`.** Deprecate it in 1.5 once `basis` is populated, or keep it as a
    payload-level summary?
+   *Proposed resolution:* deprecate in 1.5.
+7. **Provider readings without confidence.** Many platform scores relayed with
+   `inference_mode: external_provider` carry no uncertainty, yet `confidence` is required,
+   so producers must invent one. Options: allow `confidence: null` on `external_provider`
+   readings, or keep it required and require producers to document how the value was
+   assigned.
+8. **Baseline versions.** `basis` says what a score is relative to, but not which version
+   of that reference. When a person's baseline shifts, earlier and later readings with the
+   same `basis` are not comparable. Should a reading carry a baseline version identifier,
+   or is that left to producer metadata?
 
 ## Change log
 
+- **Draft 2** — `corrected` renamed `stated` and extended to standalone self-report;
+  consent-controlled visibility of `withheld`; proposed resolutions for questions 1–4
+  and 6; new questions 7 (provider confidence) and 8 (baseline versions).
 - **Draft (2026-10-19)** — First draft. Per-reading `status` / `reason` / `basis` /
   `valid_until`; no silent omission; null score needs a status; `modalities_used` and
   categorical `label` relaxed for readings without an estimate; `meta.context` frame
