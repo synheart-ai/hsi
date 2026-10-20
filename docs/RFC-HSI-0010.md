@@ -7,8 +7,8 @@
 - **Type**: Minor (breaking under pre-stable; see `versioning.md`)
 - **Target**: HSI 1.3
 - **Owner**: HSI Maintainers
-- **Paired with**: RFC-HSI-0011 (per-modality fidelity tiers). 0010 + 0011 are a single 1.3 change; both MUST be Accepted before the 1.3 schema PR proceeds.
-- **Depends on**: PR #5 against `synheart-ai/hsi` (1.2 source descriptors: `device_class`, `signals`, `transport`, `vendor`). PR #5 MUST land before the 1.3 schema PR.
+- **Paired with**: RFC-HSI-0011 (per-channel confidence breakdown). 0010 + 0011 are a single 1.3 change; both MUST be Accepted before the 1.3 schema PR proceeds.
+- **Depends on**: HSI 1.2 source descriptors (`device_class`, `signals`, `transport`, `vendor`; RFC-HSI-0008 §7).
 - **Relates to**: RFC-HSI-0008 (HSI 1.2 canonical contract), RFC-HSI-0006 (1.1 context domain), RFC-HSI-0009 (HSI 1.3 integrity block, independent)
 - **Canonical schema**: `schema/hsi-1.3.schema.json` (added when this RFC is Accepted)
 
@@ -26,7 +26,7 @@ This is a deliberate restructuring under HSI's pre-stable regime (`versioning.md
 
 ## 2. Non-goals
 
-- **Per-channel confidence attribution.** A separate RFC (RFC-HSI-0011) defines `axis_reading.confidence_breakdown`, an optional per-modality confidence map on multimodal readings. This RFC takes no position on its shape; consumers and producers should treat the two RFCs as a paired 1.3 change. (RFC-HSI-0011 was revised during 1.3 review: the earlier `tiers` design was rejected, and the 1.2 `source_tier` field is removed in 1.3 with no source-level replacement.)
+- **Per-channel confidence attribution.** A separate RFC (RFC-HSI-0011) defines `axis_reading.confidence_breakdown`, an optional per-modality confidence map on multimodal readings. This RFC takes no position on its shape; consumers and producers should treat the two RFCs as a paired 1.3 change. The 1.2 `source.source_tier` field carries over to 1.3 unchanged (RFC-HSI-0011 §3).
 - **Closed axis-name vocabularies.** Each domain lists v1 canonical members, but unknown axis names within a known domain MUST be tolerated per RFC-HSI-0008 §6.5 and `versioning.md`.
 - **Raw-signal transport.** HSI carries inferred state, not raw biosignals or feature vectors. §10 makes this an explicit normative constraint.
 - **Inference-method standardization.** Producers remain free to use rulepacks, learned models, or composites; `inference_mode` (RFC-HSI-0008 §6.3) continues to describe the method independently of `modality` (which describes the input channel).
@@ -234,7 +234,7 @@ HSI 1.3 reorganizes the axis domain set. Producers migrating from 1.2 follow thi
 ### 11.5 `context` (dissolved)
 
 - The 1.2 `axes.context[]` domain (RFC-HSI-0006) is dissolved.
-- Numeric activity-confidence axes (`activity_still_conf`, `activity_walk_conf`, etc.) are subsumed by `axes.kinematic[].activity_state` with `direction: "categorical"` and per-category scores (§8.2).
+- Numeric activity-confidence axes (`activity_still_conf`, `activity_walk_conf`, etc.) are subsumed by `axes.kinematic[].activity_state` with `direction: "categorical"` (§8). HSI 1.3 does not define per-category scores (§8.2).
 - Sleep-episode and baseline-readiness flags (`sleep_episode_active`, `baseline_ready`, `baseline_maturity`) move to `meta.provenance` as producer-defined fields. They are runtime-context for interpretation, not human-state readings.
 - Boolean/0-1 activity-state flags become categorical (§4.2, §8).
 
@@ -386,7 +386,7 @@ The 1.2 properties `engagement`, `behavior`, `context`, `emotion` are removed.
 ### 13.4 Carry-overs
 
 - The 1.2 single `axes_domain` `$def` is replaced by two domain `$defs` — `axes_domain_single_modality` and `axes_domain_multimodal` (§13.3) — to enforce the `modalities_used` placement rule at the schema level. The inner `axis_reading` shape is unchanged from 1.2 modulo the `modalities_used`, `confidence_breakdown`, `label`, `categories` additions and the extended `direction` enum; the wrapping is what's new.
-- `source` descriptor unchanged from HSI 1.2 (post-PR #5). All 1.2 fields — `type`, `quality`, `degraded`, `source_tier`, `device_class`, `signals`, `transport`, `vendor`, `notes` — carry over with identical semantics. RFC-HSI-0011 originally proposed replacing `source_tier` with a per-modality `tiers` object; that draft was rejected and `source_tier` remains the canonical architectural-fidelity field on sources.
+- `source` descriptor unchanged from HSI 1.2. All 1.2 fields — `type`, `quality`, `degraded`, `source_tier`, `device_class`, `signals`, `transport`, `vendor`, `notes` — carry over with identical semantics. RFC-HSI-0011 originally proposed replacing `source_tier` with a per-modality `tiers` object; that draft was rejected and `source_tier` remains the canonical architectural-fidelity field on sources.
 - `provenance` shape unchanged. Per-channel inference confidence on multimodal readings is expressed via `axis_reading.confidence_breakdown` (RFC-HSI-0011 §4); architectural channel fidelity continues to live on `source.source_tier`.
 - `embedding` shape unchanged.
 - All temporal, privacy, and producer fields unchanged.
@@ -487,15 +487,12 @@ Note in all three: readings do not carry a source-level tier or a `modality` fie
 - Categorical kinematic labels (`activity_state`, `postural_state`, `locomotion_state`) carry coarse activity inference. They are not PII per GDPR/HIPAA but, combined with sufficient temporal granularity, MAY enable lifestyle inference. Producers SHOULD aggregate to the coarsest temporal window consistent with the consumer's purpose, and SHOULD avoid emitting sub-second locomotion readings outside research contexts with explicit consent.
 - The `affective` domain inherits the privacy posture of the 1.2 `emotion` domain: emotional readings are sensitive and producers SHOULD restrict distribution.
 
-## 16. Open questions
+## 16. Resolved questions and future work
 
-Before promoting this RFC to Accepted:
-
-- **`mental_effort` synonym**: register `mental_effort` as a permitted alias for `cognitive_load` in the canonical-name guidance, or insist on a single name? Current draft permits both with `cognitive_load` as canonical. A stricter stance would simplify dashboards.
-- **`context` dissolution timing**: dissolve in 1.3 (current draft) or retain `axes.context` for one minor as a deprecated domain to ease migration? RFC-HSI-0006 producers will need to migrate at the 1.3 cut.
-- **Closed v1 modality set**: §6 defines the four canonical modalities as a closed set. Should `audio` (microphone-based valence/arousal) and `eeg` (EEG headsets) be reserved as future modalities now (with `MUST NOT emit until reserved`) or left as future RFC additions?
-- **Affective availability rule**: §9 requires `physiological` OR (`kinematic` AND `digital`) for affective readings. The OR/AND structure is a conservative producer-policy default rather than a calibrated science result; should this RFC ship the rule as normative MUST or downgrade to SHOULD with producer discretion until calibration data exists?
-- **Tier values comparable across modalities**: RFC-HSI-0011's per-modality tier integers all share the 1–N range and are NOT comparable across modalities. Should the schema enforce distinct value ranges (e.g. kinematic 11–13, digital 21–23), use enum strings instead of integers, or accept the existing footgun and rely on validator/documentation discipline? Decision affects RFC-HSI-0011 §4 and §8.1.
+- **`mental_effort` synonym**: permitted as an alias; `cognitive_load` is the canonical name (§4.4).
+- **`context` dissolution timing**: `axes.context` is dissolved in 1.3, with migration guidance in §11.5.
+- **Closed modality set**: the 1.3 modality set is closed (§6). Additional channels such as `audio` or `eeg` require a future RFC.
+- **Affective availability rule**: ships as a producer-policy SHOULD (§9) and is not enforced at STRICT (§12). A future RFC may make it normative once calibration data supports a specific rule.
 
 ## 17. Canonical schema
 

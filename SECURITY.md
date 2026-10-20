@@ -21,7 +21,7 @@ Embeddings can encode sensitive attributes implicitly (e.g., health, identity co
 - **Confidential transport**: HSI payloads SHOULD be transmitted over authenticated, encrypted channels (e.g., TLS).
 - **Signing**: Producers SHOULD sign payloads when integrity and provenance matter.
   - Signature format is out of scope for HSI; consumers MAY use JWS, SigV4-style, or equivalent mechanisms.
-- **Replay protection**: Consumers SHOULD implement replay detection when payload freshness matters (e.g., using `generated_at` and consumer-side nonce tracking).
+- **Replay protection**: Consumers SHOULD implement replay detection when payload freshness matters (e.g., using `computed_at_utc` and tracking previously seen `meta.ids.hsi_id` values).
 
 ### Storage and retention
 

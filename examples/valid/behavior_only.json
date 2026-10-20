@@ -49,7 +49,7 @@
     "provenance": {
       "baseline_status": "READY",
       "providers": [{ "id": "synheart-behavior", "version": "1.0.0" }],
-      "engine": "synheart-flux",
+      "engine": "example-engine",
       "engine_version": "1.0.0"
     }
   }

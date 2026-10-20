@@ -33,11 +33,10 @@
   },
   "integrity": {
     "canonicalization": "jcs/rfc8785-v1",
-    "content_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "content_hash": "sha256:162e120ef84108959a6bb7c19db385a5722a10fd834c2d5145de28cb489f7d31"
   },
   "meta": {
     "ids": { "hsi_id": "110881e9-16da-4f34-bbd4-f95fc9f54dd0" },
-    "illustrative_only": "integrity.content_hash is the well-known SHA-256 of the empty string, not a real canonicalized-payload hash. Validates BASIC + STRICT (which don't recompute) but would FAIL HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7). TODO: replace with a real hash once a reference INTEGRITY validator with a JCS canonicalizer is wired up.",
     "provenance": {
       "sources": {
         "s_wear": {

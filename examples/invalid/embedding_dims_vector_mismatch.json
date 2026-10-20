@@ -51,8 +51,8 @@
     "intent": "Invalid example: embedding.dimension does not equal len(embedding.vector).",
     "provenance": {
       "baseline_status": "READY",
-      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }],
-      "engine": "synheart-flux",
+      "providers": [{ "id": "example-focus-provider", "version": "2.1.0" }],
+      "engine": "example-engine",
       "engine_version": "1.0.0"
     }
   }

@@ -123,7 +123,7 @@
         }
       },
       "baseline_status": "READY",
-      "providers": [{ "id": "synheart-focus", "version": "2.1.0" }]
+      "providers": [{ "id": "example-focus-provider", "version": "2.1.0" }]
     }
   }
 }

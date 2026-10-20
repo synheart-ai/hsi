@@ -3,7 +3,7 @@
   "observed_at_utc": "2026-04-18T17:16:11Z",
   "computed_at_utc": "2026-04-18T17:17:11Z",
   "producer": {
-    "name": "synheart-flux",
+    "name": "example-engine",
     "version": "0.4.0"
   },
   "windows": {
@@ -141,11 +141,11 @@
       "baseline_status": "Empty",
       "providers": [
         {
-          "id": "synheart-state-runtime",
+          "id": "example-runtime",
           "version": "0.4.0"
         }
       ],
-      "engine": "synheart-state-runtime",
+      "engine": "example-runtime",
       "engine_version": "0.4.0",
       "sources": {
         "s_wear": {
