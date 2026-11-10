@@ -1,0 +1,708 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/synheart-ai/hsi/main/schema/hsi-1.4.schema.json",
+  "title": "Human State Interface (HSI) 1.4",
+  "type": "object",
+  "additionalProperties": false,
+
+  "$comment": "HSI 1.4 canonical schema (RFC-HSI-0012). Builds on 1.3 by adding a required per-reading `status` (estimated / stated / insufficient_evidence / withheld), a lean abstention shape (name, status, reason, window_ids) for readings without a value, `basis` and `baseline_version` saying what a score is relative to, and `valid_until` from the producer. Also adds an optional `meta.context` frame per window with closed per-field vocabularies, including environment fields. A reading with no estimate has a legal shape, so producers no longer omit configured members (RFC-HSI-0012 §5.6). `confidence` MAY be null only on `external_provider` readings. `confidence_breakdown` is deprecated and scheduled for removal in 1.5 (RFC-HSI-0011 §9). Everything else is carried over from 1.3 unchanged. Some reference-integrity constraints MUST be enforced out-of-band for HSI-VALIDATE-STRICT compliance.",
+
+  "required": [
+    "hsi_version",
+    "observed_at_utc",
+    "computed_at_utc",
+    "producer",
+    "windows",
+    "privacy",
+    "meta"
+  ],
+
+  "properties": {
+    "hsi_version": {
+      "type": "string",
+      "const": "1.4"
+    },
+
+    "observed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "$comment": "Event-time: the human state time (typically aligns with the latest window end)."
+    },
+
+    "computed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "$comment": "Processing-time: when this payload was produced. Must be >= observed_at_utc (enforced out-of-band unless validator supports format comparisons)."
+    },
+
+    "producer": { "$ref": "#/$defs/producer" },
+
+    "windows": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/window" },
+      "$comment": "Map keys are the authoritative window IDs. axis_reading.window_ids and embedding.window_ids SHOULD reference these keys."
+    },
+
+    "axes": { "$ref": "#/$defs/axes" },
+
+    "embeddings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/embedding" }
+    },
+
+    "privacy": { "$ref": "#/$defs/privacy" },
+
+    "integrity": { "$ref": "#/$defs/integrity" },
+
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ids"],
+      "properties": {
+        "ids": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["hsi_id"],
+          "properties": {
+            "hsi_id": {
+              "type": "string",
+              "format": "uuid",
+              "$comment": "Unique identifier for this HSI payload instance (RFC 4122 UUID). Used for deduplication, logging, and cross-system correlation."
+            }
+          },
+          "$comment": "Stable document-level identifiers. `hsi_id` is required; producers MAY add other id keys (e.g. subject_id, session_id) under `ids`."
+        },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "context": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/context_frame" },
+          "$comment": "RFC-HSI-0012 §7. Map from window id to the conditions under which that window's readings were made. Keys MUST be keys of /windows (HSI-1.4-CONTEXT-UNKNOWN-WINDOW). Emitted only when the consumer is permitted to receive context; there is no withheld form, so an unpermitted frame is omitted."
+        }
+      },
+      "$comment": "Required since 1.3. `meta.ids.hsi_id` MUST be a UUID. `meta.provenance` is the canonical place for source tracking. `meta.context` (1.4) carries the per-window context frame. Additional producer-defined keys are permitted."
+    }
+  },
+
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$"
+    },
+
+    "score01": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+
+    "source_tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "$comment": "Architectural signal-fidelity tier declared on a source in meta.provenance.sources. 1 = ground-truth (RR intervals, raw sensor stream, lab-grade ECG), 2 = vendor-derived high-fidelity, 3 = proxy time-series (≤1 Hz HR traces, motion-derived proxies), 4 = snapshot/minimal. Higher tier numbers SHOULD correspond to reduced downstream trust. Distinct from `source.quality` (transient/situational reliability in `[0, 1]`); a source can have `source_tier: 1, quality: 0.3` (architecturally ground-truth, currently degraded) or `source_tier: 3, quality: 0.95` (architecturally proxy-only, currently clean signal). The tier table is physiology-flavored; for non-physio sources producers SHOULD pick the closest analog along the raw → aggregate spectrum (raw events ≈ Tier 1, aggregated rollup ≈ Tier 4). Readings and embeddings derive an effective tier consumer-side by resolving evidence_source_ids and taking the most conservative (highest-numbered) tier among cited sources. See RFC-HSI-0008 §6.7."
+    },
+
+    "observable_modality": {
+      "type": "string",
+      "enum": ["physiological", "kinematic", "digital"],
+      "$comment": "RFC-HSI-0010 §6 observable modality set. The fourth canonical modality `multimodal` is a fusion outcome and is NOT a valid observable; it cannot appear in modalities_used or as a confidence_breakdown key."
+    },
+
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "instance_id": { "type": "string", "format": "uuid" }
+      }
+    },
+
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_utc", "end_utc"],
+      "properties": {
+        "start_utc": { "type": "string", "format": "date-time" },
+        "end_utc": { "type": "string", "format": "date-time" },
+        "label": { "type": "string" }
+      },
+      "$comment": "HSI-VALIDATE-STRICT: window.end_utc MUST be >= window.start_utc (out-of-band unless validator supports format comparisons)."
+    },
+
+    "direction": {
+      "type": "string",
+      "enum": ["higher_is_more", "lower_is_more", "bidirectional", "categorical"],
+      "$comment": "RFC-HSI-0010 §7. `lower_is_more` replaces 1.2's `higher_is_less` (semantic clarification, not behavioral). `categorical` (new in 1.3) marks readings that carry a discrete class label rather than a scalar score; gated by §8."
+    },
+
+    "inference_mode": {
+      "type": "string",
+      "enum": [
+        "probabilistic_model",
+        "deterministic_rule",
+        "external_provider",
+        "composite"
+      ],
+      "$comment": "probabilistic_model: learned/ensemble. deterministic_rule: formulas/rulepacks. external_provider: third-party or OS facts. composite: merged multi-source. Orthogonal to modality (encoded by axis-domain key, RFC-HSI-0010 §5.3)."
+    },
+
+    "token": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["estimated", "stated", "insufficient_evidence", "withheld"],
+      "$comment": "RFC-HSI-0012 §5.1. estimated: computed from evidence in its windows. stated: the person's own value for this member and window. insufficient_evidence: configured and attempted, but no estimate this window. withheld: estimable, but the consumer is not permitted to receive it. Freshness is not a status: a republished estimate stays estimated and its valid_until says whether it is still current (§5.4)."
+    },
+
+    "reason": {
+      "type": "string",
+      "enum": ["no_signal", "low_quality", "warming", "not_trained", "not_applicable", "not_granted"],
+      "$comment": "RFC-HSI-0012 §5.2. Required when status is insufficient_evidence or withheld; forbidden when status is estimated or stated. not_granted is the only reason for withheld. RFC-HSI-0010 §9 `modality_unavailable` corresponds to `no_signal`."
+    },
+
+    "basis": {
+      "type": "string",
+      "enum": ["personal_stratum", "personal_pooled", "population", "fixed_scale"],
+      "$comment": "RFC-HSI-0012 §5.3. What a normalized score is relative to. Absent means unspecified and MUST NOT be read as personal. meta.provenance.baseline_status is informative only and MUST NOT be used in place of basis to gate a reading."
+    },
+
+    "axis_reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "window_ids"],
+      "$comment": "RFC-HSI-0012 §5.1. Two shapes, selected by status. Value-bearing (estimated, stated): the full 1.3 reading plus status. Abstention (insufficient_evidence, withheld): name, status, reason, window_ids, and nothing that looks like a value.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "$comment": "Axis member name. RFC-HSI-0010 §4.1–§4.5 list canonical members per domain; SHOULD be lowercase-snake-case but the schema does not enforce a pattern (1.2 compat). Unknown names within a known domain MUST be tolerated (RFC-HSI-0008 §6.5)."
+        },
+        "score": {
+          "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
+          "$comment": "Required on estimated and stated readings; null there only when direction == categorical (label carries the value). Absent on abstentions: a missing estimate is expressed by status, never by a null score."
+        },
+        "confidence": {
+          "anyOf": [{ "$ref": "#/$defs/score01" }, { "type": "null" }],
+          "$comment": "Required on estimated and stated readings. RFC-HSI-0012 §5.4.1: null only when inference_mode == external_provider, for relayed provider scores that carry no uncertainty. Absent on abstentions."
+        },
+        "direction": { "$ref": "#/$defs/direction" },
+        "inference_mode": { "$ref": "#/$defs/inference_mode" },
+        "model_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9+.-]*://[^\\s]+$",
+          "$comment": "URI-shaped identifier (RFC 3986 scheme + path). Reserved schemes: 'model://', 'rulepack://', 'provider://', and 'stated://' (1.4; RECOMMENDED for person-stated readings, not enforced: status is the single signal that a reading is stated). Optional on insufficient_evidence readings (the model that abstained)."
+        },
+        "status": { "$ref": "#/$defs/status" },
+        "reason": { "$ref": "#/$defs/reason" },
+        "reason_detail": {
+          "$ref": "#/$defs/token",
+          "$comment": "Optional producer-defined finer cause (e.g. `device_off_body`) on insufficient_evidence readings. Not part of the contract: consumers MUST NOT branch on its values."
+        },
+        "basis": { "$ref": "#/$defs/basis" },
+        "baseline_version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "$comment": "RFC-HSI-0012 §5.3.1: opaque identifier of the version of the reference the score is relative to. Two readings with the same basis are comparable only when their baseline_version also matches. Requires basis."
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time",
+          "$comment": "RFC-HSI-0012 §5.4. Latest instant at which the producer stands behind the value. Consumers MUST NOT act on a reading whose valid_until has passed. A republished estimate keeps its original valid_until, so an expired value is self-evident. Value-bearing readings only."
+        },
+        "window_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" },
+          "$comment": "entries SHOULD reference keys in /windows."
+        },
+        "evidence_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id",
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Channel-fidelity information lives on each source descriptor (`quality`, `signals`, `degraded`)."
+          },
+          "$comment": "Required on value-bearing readings. Optional on insufficient_evidence readings, where it lists the sources that were tried. Forbidden on withheld readings."
+        },
+        "modalities_used": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/observable_modality" },
+          "$comment": "RFC-HSI-0010 §5.1 as relaxed by RFC-HSI-0012 §6.5. Required on estimated readings in axes.cognitive[] and axes.affective[]; optional on stated readings there; forbidden on abstentions and on readings in axes.physiological[] / axes.kinematic[] / axes.digital[]."
+        },
+        "confidence_breakdown": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "physiological": { "$ref": "#/$defs/score01" },
+            "kinematic": { "$ref": "#/$defs/score01" },
+            "digital": { "$ref": "#/$defs/score01" }
+          },
+          "deprecated": true,
+          "$comment": "DEPRECATED in 1.4, scheduled for removal in 1.5 (RFC-HSI-0012 §9 applying the RFC-HSI-0011 §9 rule: no canonical producer populates it consistently and no canonical consumer reads it). Still accepted so existing producers keep validating. Per-channel confidence attribution on multimodal readings only; rejected on single-modality readings via axes_domain_single_modality. Keys SHOULD be a subset of modalities_used (HSI-VALIDATE-STRICT)."
+        },
+        "label": {
+          "$ref": "#/$defs/token",
+          "$comment": "Categorical class label. Required when direction == categorical, forbidden otherwise. MUST appear in `categories` (HSI-VALIDATE-STRICT)."
+        },
+        "categories": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/token" },
+          "$comment": "Full set of possible categories the producer may emit for this axis member. Required when direction == categorical, forbidden otherwise."
+        },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "$comment": "RFC-HSI-0012 §6.3 rule 1: estimates and statements carry the full value shape and no reason.",
+          "if": { "properties": { "status": { "enum": ["estimated", "stated"] } }, "required": ["status"] },
+          "then": {
+            "required": ["score", "confidence", "direction", "evidence_source_ids", "inference_mode", "model_id"],
+            "not": {
+              "anyOf": [
+                { "required": ["reason"] },
+                { "required": ["reason_detail"] }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "RFC-HSI-0012 §6.3 rule 2: an abstention says why and carries nothing that could be read as a value.",
+          "if": { "properties": { "status": { "enum": ["insufficient_evidence", "withheld"] } }, "required": ["status"] },
+          "then": {
+            "required": ["reason"],
+            "not": {
+              "anyOf": [
+                { "required": ["score"] },
+                { "required": ["confidence"] },
+                { "required": ["direction"] },
+                { "required": ["basis"] },
+                { "required": ["baseline_version"] },
+                { "required": ["valid_until"] },
+                { "required": ["modalities_used"] },
+                { "required": ["confidence_breakdown"] }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "RFC-HSI-0012 §5.1.1 and §6.3 rule 3: withheld discloses that the member exists and nothing more.",
+          "if": { "properties": { "status": { "const": "withheld" } }, "required": ["status"] },
+          "then": {
+            "properties": { "reason": { "const": "not_granted" } },
+            "not": {
+              "anyOf": [
+                { "required": ["evidence_source_ids"] },
+                { "required": ["inference_mode"] },
+                { "required": ["model_id"] },
+                { "required": ["reason_detail"] },
+                { "required": ["notes"] }
+              ]
+            }
+          },
+          "else": {
+            "not": { "properties": { "reason": { "const": "not_granted" } }, "required": ["reason"] }
+          }
+        },
+        {
+          "$comment": "RFC-HSI-0010 §8: discriminated union on direction == categorical. Abstentions have no direction, so this applies to value-bearing readings only.",
+          "if": {
+            "properties": { "direction": { "const": "categorical" } },
+            "required": ["direction"]
+          },
+          "then": {
+            "properties": { "score": { "type": "null" } },
+            "required": ["label", "categories"]
+          },
+          "else": {
+            "properties": { "score": { "$ref": "#/$defs/score01" } },
+            "not": {
+              "anyOf": [
+                { "required": ["label"] },
+                { "required": ["categories"] }
+              ]
+            }
+          }
+        },
+        {
+          "$comment": "RFC-HSI-0012 §5.4.1: confidence may be null only on relayed provider readings.",
+          "if": { "properties": { "confidence": { "type": "null" } }, "required": ["confidence"] },
+          "then": { "required": ["inference_mode"], "properties": { "inference_mode": { "const": "external_provider" } } }
+        },
+        {
+          "$comment": "RFC-HSI-0012 §5.3.1: a baseline version only makes sense alongside the basis it versions.",
+          "if": { "required": ["baseline_version"] },
+          "then": { "required": ["basis"] }
+        }
+      ]
+    },
+
+    "axes_domain_single_modality": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/axis_reading" },
+          {
+            "$comment": "RFC-HSI-0010 §5.1 + RFC-HSI-0011 §4.2: modalities_used and confidence_breakdown are forbidden on readings in single-modality domains; the axis-domain key already encodes the modality.",
+            "not": {
+              "anyOf": [
+                { "required": ["modalities_used"] },
+                { "required": ["confidence_breakdown"] }
+              ]
+            }
+          }
+        ]
+      }
+    },
+
+    "axes_domain_multimodal": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/axis_reading" },
+          {
+            "$comment": "RFC-HSI-0010 §5.1 as relaxed by RFC-HSI-0012 §6.5: modalities_used is required on estimated readings only. confidence_breakdown is permitted but optional and deprecated.",
+            "if": { "properties": { "status": { "const": "estimated" } }, "required": ["status"] },
+            "then": { "required": ["modalities_used"] }
+          }
+        ]
+      }
+    },
+
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "physiological": { "$ref": "#/$defs/axes_domain_single_modality" },
+        "kinematic": { "$ref": "#/$defs/axes_domain_single_modality" },
+        "digital": { "$ref": "#/$defs/axes_domain_single_modality" },
+        "cognitive": { "$ref": "#/$defs/axes_domain_multimodal" },
+        "affective": { "$ref": "#/$defs/axes_domain_multimodal" }
+      },
+      "$comment": "RFC-HSI-0010 §4: closed 5-domain set. Adding a domain requires an RFC and schema bump."
+    },
+
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "quality", "degraded"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["sensor", "app", "self_report", "observer", "derived", "other"],
+          "$comment": "Role of the source — what kind of thing produced the signal. Orthogonal to `device_class` (physical form factor), `signals` (what is measured), and `transport` (how the bytes reach the producer)."
+        },
+        "quality": { "$ref": "#/$defs/score01" },
+        "degraded": { "type": "boolean" },
+        "source_tier": {
+          "$ref": "#/$defs/source_tier",
+          "$comment": "Architectural fidelity of this source. Carried over from HSI 1.2 unchanged. Orthogonal to `quality` (transient) and `signals` (channel availability)."
+        },
+        "device_class": {
+          "type": "string",
+          "enum": [
+            "strap",
+            "watch",
+            "ring",
+            "patch",
+            "wristband",
+            "armband",
+            "headset",
+            "glasses",
+            "earbud",
+            "phone",
+            "tablet",
+            "desktop",
+            "other"
+          ],
+          "$comment": "Physical form factor. Only meaningful when `type` is a hardware-bearing role (typically `sensor`). Use `other` for unusual form factors; open an RFC before adding new canonical values."
+        },
+        "signals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "$comment": "Physical or logical signals this source produces. Free-form lowercase tokens; suggested canonical names: `hrv`, `rr`, `ecg`, `ppg`, `spo2`, `resp`, `accel`, `gyro`, `mag`, `temp`, `eda`, `gsr`, `eeg`, `emg`, `touch`, `audio`. Consumers SHOULD tolerate unknown entries. Channel availability (e.g. `ppg` vs `touch`) is conveyed here; no separate fidelity tier exists in 1.3."
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "ble",
+            "ant",
+            "wifi",
+            "usb",
+            "wired",
+            "nfc",
+            "inproc",
+            "network",
+            "other"
+          ],
+          "$comment": "How data reaches the producer. `inproc` = same-process APIs. `network` = generic IP when no more specific transport applies."
+        },
+        "vendor": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "Free-form vendor/manufacturer tag (e.g. `polar`, `whoop`, `garmin`, `apple`). PRIVACY: highest-entropy field in `source`; producers SHOULD omit `vendor` in privacy-sensitive contexts where payloads may be joined across subjects (RFC-HSI-0008 §7)."
+        },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": { "$ref": "#/$defs/source" },
+          "$comment": "Map keys are the authoritative source IDs. evidence_source_ids on axis_reading and embeddings SHOULD reference these keys."
+        },
+        "baseline_status": {
+          "type": "string",
+          "$comment": "Payload-level summary, informative only. Consumers MUST gate on per-reading `basis`, not on this field. Scheduled for deprecation in 1.5 (RFC-HSI-0012 §13 Q6)."
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "engine": { "type": "string", "minLength": 1 },
+        "engine_version": { "type": "string", "minLength": 1 },
+        "equation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "merge_rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "srm_snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+
+    "context_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source"],
+      "properties": {
+        "value": {
+          "anyOf": [{ "$ref": "#/$defs/token" }, { "type": "boolean" }],
+          "$comment": "Coarse categorical token or boolean. The token pattern blocks free text; coordinates, place names, app or site names, window titles, URLs, meeting titles and participants MUST NOT appear (RFC-HSI-0012 §7.3)."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["observed", "inferred", "stated"],
+          "$comment": "How the producer knows the value. When a stated and an inferred value exist for the same field and window, the producer MUST emit the stated one."
+        },
+        "confidence": {
+          "$ref": "#/$defs/score01",
+          "$comment": "Required when source == inferred (HSI-1.4-CONTEXT-CONFIDENCE-MISSING); SHOULD be omitted otherwise."
+        }
+      },
+      "if": { "properties": { "source": { "const": "inferred" } } },
+      "then": { "required": ["confidence"] }
+    },
+
+    "context_frame": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/token" },
+      "properties": {
+        "activity": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["still", "walking", "running", "cycling", "in_vehicle", "exercising"] } } }
+          ]
+        },
+        "work_context": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["focused_work", "collaborative_work", "meeting", "communication", "break", "off_work"] } } }
+          ]
+        },
+        "time_of_day": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["night", "early_morning", "morning", "afternoon", "evening"] } } }
+          ]
+        },
+        "app_category": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["communication", "productivity", "development", "browsing", "media", "social", "gaming", "other"] } } }
+          ]
+        },
+        "focus_window": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "type": "boolean" } } }
+          ],
+          "$comment": "True when the window falls inside a focus block the person set."
+        },
+        "place_type": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["home", "workplace", "transit", "outdoors", "public_indoor", "other"] } } }
+          ],
+          "$comment": "Environment. A coarse category only; never a place name, address or coordinate."
+        },
+        "air_quality_band": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["good", "moderate", "poor", "very_poor"] } } }
+          ]
+        },
+        "noise_band": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["quiet", "moderate", "loud"] } } }
+          ]
+        },
+        "light_band": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["dark", "dim", "normal", "bright"] } } }
+          ]
+        },
+        "temperature_band": {
+          "allOf": [
+            { "$ref": "#/$defs/context_field" },
+            { "properties": { "value": { "enum": ["cold", "cool", "comfortable", "warm", "hot"] } } }
+          ]
+        }
+      },
+      "additionalProperties": { "$ref": "#/$defs/context_field" },
+      "$comment": "RFC-HSI-0012 §7.2 and Appendix A. The ten canonical fields have closed vocabularies (§13 Q4); five are environment fields. Extensions use non-canonical field names, follow the same context_field shape, and consumers MUST tolerate them."
+    },
+
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_id", "dimension", "encoding", "confidence"],
+      "properties": {
+        "window_id": {
+          "$ref": "#/$defs/id",
+          "$comment": "SHOULD reference a key in /windows."
+        },
+        "vector": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "number" }
+        },
+        "vector_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "dimension": { "type": "integer", "minimum": 1 },
+        "encoding": {
+          "type": "string",
+          "enum": ["float32", "float64", "fp16", "int8"]
+        },
+        "confidence": { "$ref": "#/$defs/score01" },
+        "model": { "type": "string" },
+        "evidence_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id",
+            "$comment": "entries SHOULD reference keys in meta.provenance.sources. Channel-fidelity is read off each cited source's quality/signals/degraded."
+          }
+        }
+      },
+      "$comment": "Embeddings do not carry per-channel confidence breakdown in 1.3; embedding-level fusion attribution is out of scope.",
+      "allOf": [
+        {
+          "anyOf": [{ "required": ["vector"] }, { "required": ["vector_hash"] }]
+        }
+      ]
+    },
+
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "content_hash"],
+      "properties": {
+        "canonicalization": {
+          "type": "string",
+          "enum": ["jcs/rfc8785-v1"],
+          "$comment": "Canonicalization method applied to the payload (with `integrity` removed) before hashing. Reserved values per RFC-HSI-0009 §3.1."
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "$comment": "Hash of the canonicalized payload with `integrity` removed. Lowercase hex prefixed by `sha256:`. RFC-HSI-0009 §4. IMPORTANT for producers: hashing is NOT self-referential — strip the `integrity` field from the payload object BEFORE canonicalizing and hashing, then attach the resulting hash back into a fresh `integrity` block. Consumers verify by performing the same strip-canonicalize-hash and comparing byte-for-byte."
+        },
+        "signature": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "key_id", "value"],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": ["ed25519", "ecdsa-p256-sha256", "rsa-pss-sha256"]
+            },
+            "key_id": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "URI or DID identifying the signing key. Resolution is out-of-band per RFC-HSI-0009 §5."
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "Prefixed signature bytes (e.g. `base64url:...`) over the UTF-8 bytes of `content_hash`. RFC-HSI-0009 §5."
+            }
+          }
+        }
+      },
+      "$comment": "Optional payload integrity block per RFC-HSI-0009. Presence does not imply verification — HSI-VALIDATE-BASIC and -STRICT do NOT recompute the hash by default; HSI-VALIDATE-INTEGRITY (RFC-HSI-0009 §7) is the tier that does."
+    },
+
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contains_pii",
+        "raw_biosignals_allowed",
+        "derived_metrics_allowed"
+      ],
+      "properties": {
+        "contains_pii": { "const": false },
+        "raw_biosignals_allowed": { "type": "boolean" },
+        "derived_metrics_allowed": { "type": "boolean" },
+        "embedding_allowed": { "type": "boolean", "default": false },
+        "consent": {
+          "type": "string",
+          "enum": ["none", "implicit", "explicit"]
+        },
+        "purposes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string", "$comment": "Non-normative clarification (MUST NOT include PII)." }
+      }
+    }
+  }
+}

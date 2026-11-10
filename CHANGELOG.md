@@ -7,9 +7,19 @@ HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY intro
 
 ## [Unreleased]
 
-### Proposed
+### Added (draft, HSI 1.4 — RFC-HSI-0012 draft 4)
 
-- RFC-HSI-0012 (Draft) for HSI 1.4. It adds per-reading `status`, `reason`, `basis` and `valid_until`, plus an optional `meta.context` frame with observed / inferred / stated sources. Abstaining readings get a legal wire shape (no silent omission), and `confidence_breakdown` is deprecated per RFC-HSI-0011 §9. Self-reported values get a `stated` status. No schema change yet.
+- Draft canonical schema `schema/hsi-1.4.schema.json`. Every `axis_reading` carries a required `status` (`estimated`, `stated`, `insufficient_evidence`, `withheld`). Abstentions are lean: `name`, `status`, `reason`, `window_ids`, with no `score` or `confidence`. Also adds `reason_detail`, `basis` and optional `baseline_version` for what a score is relative to, and producer-set `valid_until`. Six conditionals bind status to the value-bearing or abstention shape (RFC-HSI-0012 §6.3). A republished estimate stays `estimated`; consumers must not act on a reading past its `valid_until`.
+- `confidence` MAY be `null`, only on `external_provider` readings. New reserved `model_id` scheme `stated://`, recommended (not enforced) for `stated` readings.
+- Optional `meta.context` frame keyed by window id. Ten canonical fields with closed vocabularies, five of them environment fields (`place_type`, `air_quality_band`, `noise_band`, `light_band`, `temperature_band`). Each field records whether it was observed, inferred or stated.
+- `modalities_used` is required only on `estimated` readings in multimodal domains (RFC-HSI-0012 §6.5). Categorical members abstain with the same lean shape (§6.6).
+- Strict validator path `tests/hsi_validate.py::_validate_strict_14` with `HSI-1.4-DUPLICATE-MEMBER`, `HSI-1.4-CONTEXT-UNKNOWN-WINDOW` and `HSI-1.4-CONTEXT-CONFIDENCE-MISSING`.
+- 9 valid and 22 invalid 1.4 examples, and `test-vectors/v1.4/minimal.json`.
+
+### Deprecated (draft, HSI 1.4)
+
+- `axis_reading.confidence_breakdown`, scheduled for removal in 1.5 (RFC-HSI-0011 §9 rule applied in RFC-HSI-0012 §9).
+- `meta.provenance.baseline_status` is informative only; deprecation scheduled for 1.5.
 
 ## [1.3] - 2026-05-02
 

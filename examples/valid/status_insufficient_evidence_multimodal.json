@@ -1,0 +1,95 @@
+{
+  "hsi_version": "1.4",
+  "observed_at_utc": "2026-10-20T09:01:00Z",
+  "computed_at_utc": "2026-10-20T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.4.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-10-20T09:00:00Z",
+      "end_utc": "2026-10-20T09:01:00Z",
+      "label": "realtime"
+    }
+  },
+  "axes": {
+    "physiological": [
+      {
+        "name": "hrv_rmssd_norm",
+        "score": 0.41,
+        "confidence": 0.8,
+        "direction": "higher_is_more",
+        "status": "estimated",
+        "basis": "personal_stratum",
+        "valid_until": "2026-10-20T09:03:00Z",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://hrv_rmssd_norm_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["watch_ble_1"]
+      }
+    ],
+    "cognitive": [
+      {
+        "name": "focus",
+        "score": 0.72,
+        "confidence": 0.8,
+        "direction": "higher_is_more",
+        "status": "estimated",
+        "basis": "personal_stratum",
+        "valid_until": "2026-10-20T09:03:00Z",
+        "inference_mode": "composite",
+        "model_id": "model://focus_v1",
+        "window_ids": ["w_0900"],
+        "evidence_source_ids": ["watch_ble_1", "phone_os_events"],
+        "modalities_used": ["physiological", "digital"]
+      },
+      {
+        "name": "cognitive_load",
+        "status": "insufficient_evidence",
+        "reason": "no_signal",
+        "window_ids": ["w_0900"],
+        "reason_detail": "device_off_body",
+        "evidence_source_ids": ["watch_ble_1"]
+      },
+      {
+        "name": "stress",
+        "status": "insufficient_evidence",
+        "reason": "warming",
+        "window_ids": ["w_0900"]
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "ids": {
+      "hsi_id": "14000000-0000-4000-8000-000000000001"
+    },
+    "provenance": {
+      "sources": {
+        "watch_ble_1": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2,
+          "device_class": "watch",
+          "signals": ["ppg", "hrv"],
+          "transport": "ble"
+        },
+        "phone_os_events": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 1,
+          "device_class": "phone",
+          "signals": ["touch"],
+          "transport": "inproc"
+        }
+      }
+    }
+  }
+}

@@ -650,6 +650,252 @@ def _validate_strict_13(payload: dict[str, Any]) -> None:
                         )
 
 
+# -------- HSI 1.4 --------
+
+
+_INFERENCE_MODES_14 = _INFERENCE_MODES_13
+_DIRECTIONS_14 = _DIRECTIONS_13
+_OBSERVABLE_MODALITIES_14 = _OBSERVABLE_MODALITIES_13
+_SINGLE_MODALITY_DOMAINS_14 = _SINGLE_MODALITY_DOMAINS_13
+_MULTIMODAL_DOMAINS_14 = _MULTIMODAL_DOMAINS_13
+_AXIS_DOMAINS_14 = _AXIS_DOMAINS_13  # work_state is deferred to 1.5 (RFC-HSI-0012 §3).
+
+
+def _windows_overlap(a: Any, b: Any) -> bool:
+    return isinstance(a, list) and isinstance(b, list) and bool(set(a) & set(b))
+
+
+def _validate_strict_14(payload: dict[str, Any]) -> None:
+    """
+    HSI 1.4 strict checks (RFC-HSI-0012 §6.8):
+
+    Carryover from 1.3, except:
+    - the null-score meta rule is dropped; RFC-HSI-0012 §6.4 replaces it with the
+      per-reading `status` that BASIC already requires
+    - HSI-1.3-MODALITIES-USED-MISSING applies only to estimated readings (§6.5)
+    - abstentions carry no direction, score or model; checks on those fields skip them
+
+    1.4 additions:
+    - HSI-1.4-DUPLICATE-MEMBER: two readings for the same member in one domain with
+      overlapping window_ids, unless exactly one of them is stated
+    - HSI-1.4-CONTEXT-UNKNOWN-WINDOW: meta.context keys must be keys of /windows
+    - HSI-1.4-CONTEXT-CONFIDENCE-MISSING: inferred context fields must carry confidence
+      (defense-in-depth, primary at BASIC)
+
+    The §5.6 no-silent-omission rule cannot be checked from a single payload; it is a
+    producer conformance test (RFC-HSI-0012 §11).
+    """
+    windows = payload.get("windows")
+    if not isinstance(windows, dict) or not windows:
+        raise StrictValidationError("windows must be a non-empty object for strict validation")
+    window_id_set = set(windows.keys())
+
+    _check_observed_computed(payload)
+
+    for wid, w in windows.items():
+        if not isinstance(w, dict):
+            raise StrictValidationError(f"window '{wid}' must be an object")
+        try:
+            start = _parse_rfc3339(w["start_utc"])
+            end = _parse_rfc3339(w["end_utc"])
+        except Exception as e:  # noqa: BLE001
+            raise StrictValidationError(f"invalid window timestamps for '{wid}': {e}") from e
+        if end < start:
+            raise StrictValidationError(f"window '{wid}' end_utc must be >= start_utc")
+
+    axes = payload.get("axes")
+    if axes is not None:
+        if not isinstance(axes, dict):
+            raise StrictValidationError("axes must be an object")
+        unknown_domains = set(axes.keys()) - _AXIS_DOMAINS_14
+        if unknown_domains:
+            raise StrictValidationError(
+                f"axes contains domains outside the canonical 1.4 set: {sorted(unknown_domains)}; "
+                f"expected subset of {sorted(_AXIS_DOMAINS_14)}"
+            )
+
+    prov_sources = _provenance_sources(payload)
+    seen: dict[tuple[str, str], list[dict[str, Any]]] = {}
+
+    for domain_key, r in _iter_readings_with_domain_13(axes):
+        name = r.get("name")
+        status = r.get("status")
+
+        direction = r.get("direction")
+        if direction is not None and direction not in _DIRECTIONS_14:
+            raise StrictValidationError(
+                f"axis reading has invalid direction '{direction}'; "
+                f"expected one of {sorted(_DIRECTIONS_14)}"
+            )
+
+        wids = r.get("window_ids")
+        if isinstance(wids, list):
+            for wid in wids:
+                if wid not in window_id_set:
+                    raise StrictValidationError(f"axis reading references unknown window id '{wid}'")
+
+        imode = r.get("inference_mode")
+        if imode is not None and imode not in _INFERENCE_MODES_14:
+            raise StrictValidationError(
+                f"axis reading has invalid inference_mode '{imode}'; "
+                f"expected one of {sorted(_INFERENCE_MODES_14)}"
+            )
+
+        # valid_until is not ordered against computed_at_utc: a republished estimate keeps
+        # its original, possibly expired, valid_until (RFC-HSI-0012 §5.4).
+        valid_until = r.get("valid_until")
+        if valid_until is not None:
+            try:
+                _parse_rfc3339(valid_until)
+            except Exception as e:  # noqa: BLE001
+                raise StrictValidationError(f"invalid valid_until on '{name}': {e}") from e
+
+        modalities_used = r.get("modalities_used")
+        if domain_key in _MULTIMODAL_DOMAINS_14:
+            if status == "estimated" and not modalities_used:
+                raise StrictValidationError(
+                    f"HSI-1.3-MODALITIES-USED-MISSING: axes.{domain_key}[] reading "
+                    f"'{name}' with status '{status}' must include a non-empty modalities_used"
+                )
+            if modalities_used is not None:
+                if not isinstance(modalities_used, list):
+                    raise StrictValidationError("modalities_used must be an array")
+                unknown = [m for m in modalities_used if m not in _OBSERVABLE_MODALITIES_14]
+                if unknown:
+                    raise StrictValidationError(
+                        f"modalities_used entries must be in {sorted(_OBSERVABLE_MODALITIES_14)}; "
+                        f"got {unknown}"
+                    )
+        elif domain_key in _SINGLE_MODALITY_DOMAINS_14:
+            if modalities_used is not None:
+                raise StrictValidationError(
+                    f"HSI-1.3-MODALITIES-USED-FORBIDDEN: axes.{domain_key}[] reading "
+                    f"'{name}' must not include modalities_used "
+                    "(modality is encoded by the axis-domain key)"
+                )
+
+        if direction == "categorical":
+            label = r.get("label")
+            categories = r.get("categories")
+            if label is not None:
+                if not isinstance(label, str) or not isinstance(categories, list):
+                    raise StrictValidationError(
+                        "categorical axis_reading with a `label` must also include `categories`"
+                    )
+                if label not in categories:
+                    raise StrictValidationError(
+                        f"HSI-1.3-CATEGORICAL-LABEL-IN-CATEGORIES: axes.{domain_key}[] reading "
+                        f"'{name}' label '{label}' must appear in categories {categories}"
+                    )
+
+        confidence_breakdown = r.get("confidence_breakdown")
+        if confidence_breakdown is not None:
+            if domain_key in _SINGLE_MODALITY_DOMAINS_14:
+                raise StrictValidationError(
+                    f"HSI-1.3-CONFIDENCE-BREAKDOWN-FORBIDDEN: axes.{domain_key}[] reading "
+                    f"'{name}' must not include confidence_breakdown"
+                )
+            if not isinstance(confidence_breakdown, dict) or not confidence_breakdown:
+                raise StrictValidationError("confidence_breakdown must be a non-empty object")
+            if isinstance(modalities_used, list):
+                missing = [k for k in confidence_breakdown if k not in set(modalities_used)]
+                if missing:
+                    raise StrictValidationError(
+                        f"HSI-1.3-CONFIDENCE-BREAKDOWN-MISMATCH: axes.{domain_key}[] reading "
+                        f"'{name}' confidence_breakdown keys {missing} are not in "
+                        f"modalities_used {sorted(modalities_used)}"
+                    )
+
+        evidence = r.get("evidence_source_ids")
+        if evidence:
+            if prov_sources is None or not prov_sources:
+                raise StrictValidationError(
+                    "evidence_source_ids present but meta.provenance.sources is missing or empty"
+                )
+            if not isinstance(evidence, list):
+                raise StrictValidationError("evidence_source_ids must be an array")
+            for sid in evidence:
+                if sid not in prov_sources:
+                    raise StrictValidationError(
+                        f"axis reading references unknown provenance source id '{sid}'"
+                    )
+
+        if isinstance(name, str):
+            for other in seen.setdefault((domain_key, name), []):
+                if not _windows_overlap(wids, other.get("window_ids")):
+                    continue
+                if (status == "stated") != (other.get("status") == "stated"):
+                    continue
+                raise StrictValidationError(
+                    f"HSI-1.4-DUPLICATE-MEMBER: axes.{domain_key}[] has two readings for "
+                    f"'{name}' with overlapping window_ids; only an estimate plus one "
+                    "stated reading may share a window"
+                )
+            seen[(domain_key, name)].append(r)
+
+    if prov_sources is not None:
+        for sid, src in prov_sources.items():
+            if isinstance(src, dict) and "tiers" in src:
+                raise StrictValidationError(
+                    f"meta.provenance.sources['{sid}'] includes 'tiers', which is not part "
+                    "of HSI; use `source.source_tier` (integer 1..=4)"
+                )
+
+    meta = payload.get("meta")
+    context = meta.get("context") if isinstance(meta, dict) else None
+    if context is not None:
+        if not isinstance(context, dict):
+            raise StrictValidationError("meta.context must be an object")
+        for wid, frame in context.items():
+            if wid not in window_id_set:
+                raise StrictValidationError(
+                    f"HSI-1.4-CONTEXT-UNKNOWN-WINDOW: meta.context key '{wid}' is not a key of windows"
+                )
+            if not isinstance(frame, dict):
+                continue
+            for field, entry in frame.items():
+                if (
+                    isinstance(entry, dict)
+                    and entry.get("source") == "inferred"
+                    and entry.get("confidence") is None
+                ):
+                    raise StrictValidationError(
+                        f"HSI-1.4-CONTEXT-CONFIDENCE-MISSING: meta.context['{wid}'].{field} "
+                        "is inferred and must carry a confidence"
+                    )
+
+    embeddings = payload.get("embeddings")
+    if embeddings is not None:
+        if not isinstance(embeddings, list):
+            raise StrictValidationError("embeddings must be an array")
+        for i, emb in enumerate(embeddings):
+            if not isinstance(emb, dict):
+                raise StrictValidationError(f"embeddings[{i}] must be an object")
+            ewid = emb.get("window_id")
+            if ewid not in window_id_set:
+                raise StrictValidationError(f"embedding references unknown window_id '{ewid}'")
+            vec = emb.get("vector")
+            dim = emb.get("dimension")
+            if vec is not None:
+                if not isinstance(vec, list):
+                    raise StrictValidationError("embedding.vector must be an array when present")
+                if isinstance(dim, int) and dim != len(vec):
+                    raise StrictValidationError("embedding.dimension must equal len(embedding.vector)")
+            evidence = emb.get("evidence_source_ids")
+            if evidence:
+                if prov_sources is None or not prov_sources:
+                    raise StrictValidationError(
+                        "embedding.evidence_source_ids present but meta.provenance.sources is missing or empty"
+                    )
+                if not isinstance(evidence, list):
+                    raise StrictValidationError("embedding.evidence_source_ids must be an array")
+                for sid in evidence:
+                    if sid not in prov_sources:
+                        raise StrictValidationError(
+                            f"embedding references unknown provenance source id '{sid}'"
+                        )
+
+
 # -------- dispatcher --------
 
 
@@ -658,6 +904,7 @@ _STRICT_BY_VERSION = {
     "1.1": _validate_strict_11,
     "1.2": _validate_strict_12,
     "1.3": _validate_strict_13,
+    "1.4": _validate_strict_14,
 }
 
 

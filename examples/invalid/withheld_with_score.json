@@ -1,0 +1,59 @@
+{
+  "hsi_version": "1.4",
+  "observed_at_utc": "2026-10-20T09:01:00Z",
+  "computed_at_utc": "2026-10-20T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.4.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-10-20T09:00:00Z",
+      "end_utc": "2026-10-20T09:01:00Z",
+      "label": "realtime"
+    }
+  },
+  "axes": {
+    "affective": [
+      {
+        "name": "valence",
+        "status": "withheld",
+        "reason": "not_granted",
+        "window_ids": ["w_0900"],
+        "score": 0.4
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "ids": {
+      "hsi_id": "14000000-0000-4000-8000-00000000000a"
+    },
+    "provenance": {
+      "sources": {
+        "watch_ble_1": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2,
+          "device_class": "watch",
+          "signals": ["ppg", "hrv"],
+          "transport": "ble"
+        },
+        "phone_os_events": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 1,
+          "device_class": "phone",
+          "signals": ["touch"],
+          "transport": "inproc"
+        }
+      }
+    }
+  }
+}

@@ -2,13 +2,13 @@
 
 ## HSI 1.4 — Reading Status, Basis and Freshness
 
-- **Status**: Draft
+- **Status**: Draft 4 — design tightened after review (lean abstentions, four statuses); ready for acceptance
 - **Created**: 2026-10-19
-- **Type**: Minor (pre-stable; additive on 1.3 except the tightening in §6.4)
+- **Type**: Minor (pre-stable; additive on 1.3 except the tightening in §6.4, which makes `status` required)
 - **Target**: HSI 1.4
 - **Owner**: HSI Maintainers
 - **Relates to**: RFC-HSI-0008 (1.2 canonical contract, §6.6 null and missing readings), RFC-HSI-0010 (1.3 domain set, `modalities_used`, §9 modality availability), RFC-HSI-0011 (1.3 `confidence_breakdown`, §9 revisit rule), RFC-HSI-0009 (integrity block, unaffected)
-- **Canonical schema**: `schema/hsi-1.4.schema.json` (to be added once this RFC is Accepted)
+- **Canonical schema**: `schema/hsi-1.4.schema.json` (draft, tracks this RFC)
 
 ## 1. Purpose
 
@@ -92,6 +92,7 @@ long a reading holds. Only the producer can state it.
 - **Coverage enumeration.** HSI does not list every member a producer could ever emit.
   §5.6 says when an abstaining reading is required.
 - **Changing `score` semantics.** `null` still means unknown and MUST NOT be read as zero.
+- **A work-state domain.** Deferred to its own RFC targeting 1.5 (§13).
 
 ## 4. Relation to prior RFCs
 
@@ -115,25 +116,51 @@ All of these live on `axis_reading`.
 ```json
 "status": {
   "type": "string",
-  "enum": ["estimated", "insufficient_evidence", "stale", "withheld", "stated"]
+  "enum": ["estimated", "stated", "insufficient_evidence", "withheld"]
 }
 ```
 
-| Value | Meaning | `score` | `confidence` |
-| --- | --- | --- | --- |
-| `estimated` | The producer computed this reading from evidence in its windows. | non-null (null only when `direction: categorical`; `label` carries the value) | producer's confidence |
-| `insufficient_evidence` | The producer is configured to emit this member and tried, but could not estimate it this window. | `null` | `0` |
-| `stale` | The producer is re-publishing its most recent estimate after that estimate's `valid_until` has passed, because nothing newer exists. | prior value, or `null` | prior value |
-| `withheld` | The producer could estimate this member, but the consumer is not permitted to receive it. | `null` | `0` |
-| `stated` | The person stated a value for this member and window, either correcting an estimate or reporting one where none exists. | stated value | see §5.1.2 |
+| Value | Meaning | Shape |
+| --- | --- | --- |
+| `estimated` | The producer computed this reading from evidence in its windows. | value-bearing |
+| `stated` | The person stated a value for this member and window, either correcting an estimate or reporting one where none exists. | value-bearing |
+| `insufficient_evidence` | The producer is configured to emit this member and tried, but could not estimate it this window. | abstention |
+| `withheld` | The producer could estimate this member, but the consumer is not permitted to receive it. | abstention |
+
+`status` is REQUIRED on every 1.4 reading (§13 Q1). Consumers branch on one field
+instead of inferring `estimated` from absence.
+
+`status` selects one of two shapes:
+
+- **Value-bearing** (`estimated`, `stated`): the 1.3 reading plus `status`. `score`,
+  `confidence`, `direction`, `inference_mode`, `model_id` and `evidence_source_ids` are
+  required, as in 1.3.
+- **Abstention** (`insufficient_evidence`, `withheld`): `name`, `status`, `reason` and
+  `window_ids`. `score`, `confidence`, `direction`, `basis`, `baseline_version`,
+  `valid_until`, `modalities_used` and `confidence_breakdown` MUST be absent. An
+  abstention carries nothing that could be read as a value, so a consumer cannot misread
+  a placeholder as zero, and the producer never invents a confidence for an estimate that
+  does not exist:
+
+  ```json
+  { "name": "cognitive_load", "status": "insufficient_evidence", "reason": "no_signal", "window_ids": ["w_0900"] }
+  ```
+
+  An `insufficient_evidence` reading MAY also carry `reason_detail`, `notes`,
+  `evidence_source_ids` (the sources that were tried) and `model_id` / `inference_mode`
+  (the estimator that abstained).
+
+Freshness is not a status. A producer that republishes its last estimate because nothing
+newer exists keeps it `estimated` with its original `valid_until`; the expired
+`valid_until` tells the consumer it must not act on it (§5.4).
 
 #### 5.1.1 `withheld` discloses existence only
 
 A `withheld` reading tells the consumer that the member exists and is outside its
-permission, and nothing more. Producers MUST set `score: null`, `confidence: 0` and
-`evidence_source_ids: []`. They MUST omit `confidence_breakdown`, `label`, `notes` and
-`modalities_used`. `window_ids` MAY be kept so the consumer can line the reading up with
-its others.
+permission, and nothing more. It is the abstention shape with `reason: not_granted`, and
+nothing else: `evidence_source_ids`, `model_id`, `inference_mode`, `reason_detail` and
+`notes` MUST also be absent. `window_ids` stays so the consumer can line the reading up
+with its others.
 
 Producers SHOULD emit `withheld` only for members the consumer asked for. They SHOULD
 NOT list every member the consumer is denied, because that publishes the producer's full
@@ -153,12 +180,16 @@ standalone report where no estimate exists (for example, a questionnaire rating)
 no legal shape for the second case: self-report is a source type but not a modality, so a
 multimodal reading backed only by self-report must name a channel it did not use. Rules:
 
-- `model_id` uses a new reserved scheme, `stated://` (for example
-  `stated://self-report`). This RFC adds it to the reserved list beside `model://`,
-  `rulepack://` and `provider://`.
-- `inference_mode` is `external_provider`.
-- `confidence` is the producer's trust in the statement. A producer that takes
-  statements at face value uses `1`.
+- `status: stated` is the only signal that a reading is stated. Consumers MUST NOT infer
+  it from `model_id` or `inference_mode`.
+- This RFC adds a reserved `model_id` scheme, `stated://` (for example
+  `stated://self-report`), beside `model://`, `rulepack://` and `provider://`. Producers
+  SHOULD use it for stated readings and SHOULD NOT use it for others. `inference_mode`
+  SHOULD be `external_provider`. Neither is enforced: they describe where the value came
+  from, and repeating `status` in them would give three fields that could disagree.
+- `confidence` is the producer's trust in the statement. It defaults to `1`. A producer
+  MAY discount a statement that contradicts strong evidence, and SHOULD document how
+  (§13 Q3). Consumers still prefer the `stated` reading.
 - `modalities_used` MAY be absent, because a statement is not observed through a channel.
   Its source SHOULD be a `meta.provenance.sources` entry with `type: self_report`.
 - A consumer holding both an `estimated` and a `stated` reading for the same member
@@ -179,8 +210,8 @@ multimodal reading backed only by self-report must name a channel it did not use
 
 | `reason` | Meaning | Allowed with `status` |
 | --- | --- | --- |
-| `no_signal` | No usable evidence arrived for the channels this member needs. | `insufficient_evidence`, `stale` |
-| `low_quality` | Evidence arrived but was too sparse, noisy or short to estimate from. | `insufficient_evidence`, `stale` |
+| `no_signal` | No usable evidence arrived for the channels this member needs. | `insufficient_evidence` |
+| `low_quality` | Evidence arrived but was too sparse, noisy or short to estimate from. | `insufficient_evidence` |
 | `warming` | The personal baseline this member is relative to is not ready yet. | `insufficient_evidence` |
 | `not_trained` | The model has no training evidence for this member or person. | `insufficient_evidence` |
 | `not_applicable` | The member is not meaningful under the current sensing conditions, such as intermittent sampling or a device worn where the member cannot be measured. | `insufficient_evidence` |
@@ -188,11 +219,12 @@ multimodal reading backed only by self-report must name a channel it did not use
 
 Rules:
 
-- `reason` is REQUIRED when `status` is `insufficient_evidence`, `stale` or `withheld`,
-  and MUST be absent when `status` is `estimated` or `stated`.
-- `reason_detail` is an OPTIONAL producer-defined token that keeps a more specific cause
-  than the `reason` enum (for example `device_off_body`). It MUST NOT appear on
-  `withheld` readings. Consumers MUST NOT branch on `reason_detail` values; they are not
+- `reason` is REQUIRED on abstentions and MUST be absent on value-bearing readings.
+  `not_granted` is used with `withheld` and nothing else; every other reason implies
+  `insufficient_evidence`.
+- `reason_detail` is an OPTIONAL producer-defined token on `insufficient_evidence`
+  readings that keeps a more specific cause than the `reason` enum (for example
+  `device_off_body`). Consumers MUST NOT branch on `reason_detail` values; they are not
   part of the contract.
 - `modality_unavailable` (RFC-HSI-0010 §9) corresponds to `no_signal`.
 
@@ -215,11 +247,28 @@ Rules:
 Rules:
 
 - `basis` is OPTIONAL. Absent means unspecified and MUST NOT be read as personal.
-- Producers SHOULD set `basis` on every `estimated` and `stale` reading. It MUST be
-  absent on `withheld` readings.
+- Producers SHOULD set `basis` on every `estimated` reading. It MUST be absent on
+  abstentions.
 - `basis` is per reading because payloads mix readings with different bases (§2.3).
-- `meta.provenance.baseline_status` is retained unchanged. Consumers SHOULD treat it as
-  informative and MUST NOT use it in place of `basis` to gate a reading.
+- `meta.provenance.baseline_status` is retained unchanged in 1.4 and is scheduled for
+  deprecation in 1.5 (§13 Q6). Consumers SHOULD treat it as informative and MUST NOT use
+  it in place of `basis` to gate a reading.
+
+#### 5.3.1 `baseline_version`
+
+```json
+"baseline_version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" }
+```
+
+`basis` says what a score is relative to, but not which version of that reference. When a
+person's baseline is re-estimated, readings before and after share a `basis` yet are not
+comparable (§13 Q8). `baseline_version` is an OPTIONAL opaque identifier of the reference
+version, such as a hash or counter of the baseline parameters.
+
+- It requires `basis` and MUST be absent on abstentions.
+- Consumers comparing readings over time SHOULD treat readings with different
+  `baseline_version` values as not directly comparable.
+- Its value carries no meaning beyond equality; consumers MUST NOT parse it.
 
 ### 5.4 `valid_until`
 
@@ -228,22 +277,31 @@ Rules:
 ```
 
 - The producer sets it from the window step and the signal cadence: the latest instant
-  at which it still stands behind the reading.
-- It MUST be later than `computed_at_utc`, except on `stale` readings, where it carries
-  the expired value from the original estimate (HSI-VALIDATE-STRICT).
-- **Consumer rule:** a reading whose `valid_until` is in the past at the time of use MUST
-  be treated as `stale`, whatever its `status` says.
+  at which it still stands behind the value. Value-bearing readings only.
+- A republished estimate keeps the `valid_until` it was first emitted with. It is not
+  ordered against `computed_at_utc`.
+- **Consumer rule:** a consumer MUST NOT act on a reading whose `valid_until` is in the
+  past at the time of use. This one rule is the whole freshness mechanism; there is no
+  separate status for an expired reading, so the producer's label and the consumer's
+  clock cannot disagree.
 - OPTIONAL. Consumers keep their own freshness defaults for readings without it.
+
+### 5.4.1 Provider readings without confidence
+
+Many platform scores relayed with `inference_mode: external_provider` carry no
+uncertainty. 1.3 requires `confidence`, so producers invent one. In 1.4 `confidence` MAY
+be `null`, but only when `inference_mode` is `external_provider` (§13 Q7). Producers MUST
+NOT assign an arbitrary value to such a reading. A consumer with a confidence floor treats
+a `null` confidence as failing it unless the consumer has decided to trust that provider.
 
 ### 5.5 Field matrix
 
-| `status` | `score` | `confidence` | `reason` | `basis` | `evidence_source_ids` | `modalities_used` (multimodal domains) |
+| `status` | `score` | `confidence` | `reason` | `basis`, `valid_until` | `evidence_source_ids` | `modalities_used` (multimodal domains) |
 | --- | --- | --- | --- | --- | --- | --- |
-| `estimated` | required non-null (categorical: null + `label`) | any | absent | SHOULD | any | required |
-| `insufficient_evidence` | `null` | `0` | required | MAY | MAY (the sources that were tried) | MAY be absent |
-| `stale` | prior or `null` | prior | required | SHOULD | prior | required if `score` non-null |
-| `withheld` | `null` | `0` | `not_granted` | absent | `[]` | absent |
-| `stated` | required non-null (categorical: `label`) | any | absent | MAY | MAY | MAY be absent |
+| `estimated` | required non-null (categorical: null + `label`) | required (`null` only on `external_provider`, §5.4.1) | absent | SHOULD | required | required |
+| `stated` | required non-null (categorical: null + `label`) | required | absent | MAY | required | MAY |
+| `insufficient_evidence` | absent | absent | required | absent | MAY (the sources that were tried) | absent |
+| `withheld` | absent | absent | `not_granted` | absent | absent | absent |
 
 ### 5.6 No silent omission
 
@@ -269,51 +327,55 @@ validate each payload against the schema for its declared version (`versioning.m
 
 ### 6.2 `axis_reading`
 
-Add `status`, `reason`, `reason_detail`, `basis` and `valid_until` (§5) as optional
-properties. `additionalProperties: false` stays, so a 1.3 validator rejects these
-fields. That is expected: a 1.4 payload is not a 1.3 payload.
+Add `status` (required, §6.4) and `reason`, `reason_detail`, `basis`, `baseline_version`
+and `valid_until` (optional) (§5). The base `required` list becomes `name`, `status`,
+`window_ids`; the remaining 1.3 required fields move under the value-bearing branch.
+`confidence` becomes nullable under §5.4.1.
+`additionalProperties: false` stays, so a 1.3 validator rejects these fields. That is
+expected: a 1.4 payload is not a 1.3 payload.
 
 ### 6.3 Conditionals the schema enforces
 
 Expressed as `allOf` / `if` / `then` on `axis_reading`, beside the existing categorical
 discriminator:
 
-1. `status ∈ {insufficient_evidence, withheld}` ⇒ `score: null`, `confidence: 0`, `reason` required.
-2. `status == withheld` ⇒ `reason: not_granted`, `evidence_source_ids` has `maxItems: 0`,
-   and `basis`, `reason_detail`, `confidence_breakdown`, `label`, `notes` and
-   `modalities_used` are forbidden.
-3. `status == stale` ⇒ `reason` required.
-4. `status ∈ {estimated, stated}` or absent ⇒ `reason` and `reason_detail` forbidden.
-5. `status ∈ {estimated, stated}` and `direction != categorical` ⇒ `score` non-null.
-6. `reason == not_granted` ⇒ `status == withheld`. `reason ∈ {warming, not_trained, not_applicable}` ⇒ `status == insufficient_evidence`.
+1. `status ∈ {estimated, stated}` ⇒ `score`, `confidence`, `direction`,
+   `evidence_source_ids`, `inference_mode` and `model_id` required; `reason` and
+   `reason_detail` forbidden.
+2. `status ∈ {insufficient_evidence, withheld}` ⇒ `reason` required; `score`,
+   `confidence`, `direction`, `basis`, `baseline_version`, `valid_until`,
+   `modalities_used` and `confidence_breakdown` forbidden.
+3. `status == withheld` ⇒ `reason: not_granted`; `evidence_source_ids`, `model_id`,
+   `inference_mode`, `reason_detail` and `notes` forbidden. Any other status ⇒ `reason`
+   is not `not_granted`.
+4. `direction == categorical` ⇒ `score: null`, `label` and `categories` required. Any
+   other present direction, or none ⇒ `score` (if present) non-null, `label` and
+   `categories` forbidden (the 1.3 discriminator, unchanged in form).
+5. `confidence: null` ⇒ `inference_mode == external_provider` (§5.4.1).
+6. `baseline_version` present ⇒ `basis` required (§5.3.1).
 
-### 6.4 Tightening: a null score needs a status
+### 6.4 Tightening: every reading carries a status
 
-In 1.4 a reading with `score: null` and `direction` other than `categorical` MUST carry
-`status`. This replaces the payload-level rule in §2.2, which always passes. HSI is
-pre-stable, so a minor may tighten (`versioning.md`). 1.3 payloads keep validating
-against the 1.3 schema.
-
-`status` stays optional on readings with a non-null score. Absent there means
-`estimated`. See open question 1 for making it required everywhere.
+In 1.4 every reading MUST carry `status` (§13 Q1). This replaces the payload-level null
+explanation in §2.2, which always passes, and removes the need to infer `estimated` from
+absence. HSI is pre-stable, so a minor may tighten (`versioning.md`). 1.3 payloads keep
+validating against the 1.3 schema.
 
 ### 6.5 Relaxing `modalities_used` for readings without an estimate
 
-`axes_domain_multimodal` keeps `modalities_used` required, except when
-`status ∈ {insufficient_evidence, withheld, stated}`, or when `status == stale` with
-`score: null`. On `insufficient_evidence` and `stated` it MAY still be present (the
-channels that were tried, or none). On `withheld` it is forbidden (§5.1.1).
+`axes_domain_multimodal` requires `modalities_used` on `estimated` readings only. It MAY
+be present on `stated` readings and is forbidden on abstentions (§5.1).
 
 The single-modality domains are unchanged: `modalities_used` and `confidence_breakdown`
 stay forbidden there.
 
 ### 6.6 Categorical readings that abstain
 
-The 1.3 categorical discriminator requires `label` whenever `direction == categorical`.
-1.4 requires `label` only when `status` is `estimated`, `stated` or absent, or is
-`stale` with a prior label. On `insufficient_evidence` and `withheld`, `label` MUST be
-absent. `categories` MAY stay on `insufficient_evidence` so consumers know the
-vocabulary, and is forbidden on `withheld`.
+The 1.3 categorical discriminator is unchanged: `direction == categorical` requires
+`label` and `categories`. An abstention carries no `direction`, so a categorical member
+abstains with the same four-field shape as any other member, and the discriminator does
+not apply. The member's vocabulary is a property of the member, carried on its
+value-bearing readings.
 
 ### 6.7 `meta.context`
 
@@ -325,21 +387,25 @@ Checks the schema cannot express:
 
 | Code | Rule |
 | --- | --- |
-| `HSI-1.4-VALID-UNTIL-ORDER` | `valid_until > computed_at_utc` unless `status == stale` |
-| `HSI-1.4-STALE-NOT-EXPIRED` | `status == stale` with `valid_until ≥ computed_at_utc` |
 | `HSI-1.4-DUPLICATE-MEMBER` | Two readings for the same member in one domain with overlapping `window_ids`, unless exactly one is `stated` |
 | `HSI-1.4-CONTEXT-UNKNOWN-WINDOW` | A `meta.context` key that is not a key of `windows` |
-| `HSI-1.4-CONTEXT-CONFIDENCE-MISSING` | A context field with `source: inferred` and no `confidence` |
+| `HSI-1.4-CONTEXT-CONFIDENCE-MISSING` | A context field with `source: inferred` and no `confidence` (also enforced at BASIC) |
 
-The 1.3 STRICT rules carry over unchanged, except the `modalities_used`-missing check,
-which follows §6.5.
+The 1.3 STRICT rules carry over unchanged, except:
+
+- the `modalities_used`-missing check applies to `estimated` readings only (§6.5);
+- checks on `direction`, `inference_mode` and evidence references skip abstentions that
+  omit those fields;
+- the payload-level null-score meta rule is dropped, because §6.4 replaces it.
 
 ## 7. `meta.context` — the context frame
 
 ### 7.1 Purpose
 
 Readings are interpreted relative to the conditions they were observed under: still or
-moving, in a meeting or working alone, inside a focus block the person set. 1.3 dissolved
+moving, in a meeting or working alone, inside a focus block the person set, in a loud or
+hot room. The surroundings that shape state are read beside it, not mistaken for it.
+1.3 dissolved
 the `axes.context` domain (RFC-HSI-0010 §11), so there is no canonical place for those
 conditions. 1.4 adds an optional map from window id to a context frame. Each field
 records **how the producer knows it**.
@@ -354,7 +420,9 @@ records **how the producer knows it**.
       "work_context": { "value": "meeting",       "source": "inferred", "confidence": 0.7 },
       "time_of_day":  { "value": "morning",       "source": "observed" },
       "app_category": { "value": "communication", "source": "observed" },
-      "focus_window": { "value": true,            "source": "stated" }
+      "focus_window": { "value": true,            "source": "stated" },
+      "place_type":   { "value": "workplace",     "source": "inferred", "confidence": 0.8 },
+      "noise_band":   { "value": "loud",          "source": "observed" }
     }
   }
 }
@@ -381,9 +449,12 @@ records **how the producer knows it**.
 - The frame is an object whose property names are field names
   (`^[a-z][a-z0-9_]*$`) and whose values are `context_field`. As with axis names,
   consumers MUST tolerate unknown field names.
-- Canonical field names in 1.4: `activity`, `work_context`, `time_of_day`,
-  `app_category`, `focus_window`. Their value vocabularies are listed in an appendix to
-  the 1.4 schema PR, not frozen here.
+- Canonical field names in 1.4 are the five activity and work fields `activity`,
+  `work_context`, `time_of_day`, `app_category`, `focus_window`, and the five environment
+  fields `place_type`, `air_quality_band`, `noise_band`, `light_band`,
+  `temperature_band`. Each has a closed value vocabulary, listed in Appendix A and
+  enforced by the schema (§13 Q4). Extensions use non-canonical field names with the same
+  `context_field` shape.
 - `confidence` is required when `source == inferred` and SHOULD be omitted otherwise.
 - When a stated value and an inferred value exist for the same field and window, the
   producer MUST emit the stated one.
@@ -414,7 +485,8 @@ Common reasons a producer cannot estimate a reading, and how each maps to 1.4:
 | Member not meaningful under intermittent sampling or the current device placement | `insufficient_evidence` / `not_applicable` |
 | Estimator not enabled in this deployment | not emitted (outside the configured set, §5.6) |
 | Consumer not permitted to receive the member | `withheld` / `not_granted` |
-| Person corrected the estimate, or reported a value with no estimate | `stated` with a `stated://` `model_id` |
+| Person corrected the estimate, or reported a value with no estimate | `stated` (conventionally with a `stated://` `model_id`) |
+| Nothing newer than the last estimate, and the producer republishes it | `estimated`, keeping its original (now past) `valid_until` |
 
 Producers that already report omission reasons under a private `meta` key SHOULD move
 them onto the readings when they emit 1.4. They MAY keep the private key on 1.3 payloads.
@@ -456,11 +528,14 @@ the action check above with the floor as a parameter.
 
 **Downgrading to 1.3.** A producer that must also serve a 1.3 consumer:
 
-- strips the five new fields and `meta.context`;
-- drops `withheld` readings;
-- keeps non-categorical `insufficient_evidence` readings as `score: null` where they are
-  legal in 1.3, and drops them where they are not (multimodal readings with no
-  `modalities_used`, and abstaining categorical readings).
+- strips `status`, `reason`, `reason_detail`, `basis`, `baseline_version`,
+  `valid_until` and `meta.context`;
+- drops `withheld` and `stated` readings, and readings with `confidence: null`, none of
+  which 1.3 can represent faithfully;
+- drops `insufficient_evidence` readings. 1.3 has a `score: null` placeholder, but
+  rebuilding one needs a `direction`, `model_id` and a confidence the abstention does not
+  carry, and the 1.3 null-score explanation is payload-level (§2.2). Omission is the
+  honest 1.3 rendering.
 
 ## 11. Conformance and acceptance
 
@@ -469,24 +544,27 @@ The 1.4 schema PR ships with:
 - `schema/hsi-1.4.schema.json`, `test-vectors/v1.4/`, and a `_validate_strict_14` path in
   `tests/hsi_validate.py` implementing §6.8.
 - Valid examples:
-  - `status_insufficient_evidence_multimodal.json` (no `modalities_used`);
+  - `status_insufficient_evidence_multimodal.json` (lean abstentions in a multimodal domain);
   - `status_withheld.json`;
-  - `status_stale.json`;
-  - `status_stated.json`;
-  - `basis_mixed.json` (personal and population readings in one payload);
-  - `context_frame.json`;
-  - `categorical_insufficient_evidence.json`.
+  - `estimated_republished_expired.json` (republished estimates with a past `valid_until`);
+  - `status_stated.json` (standalone self-report);
+  - `status_stated_correction.json` (an estimate and a statement for the same window);
+  - `basis_mixed.json` (personal, population and fixed-scale readings, with a `baseline_version`);
+  - `context_frame.json` (all ten canonical fields plus an extension field);
+  - `categorical_estimated_and_abstention.json`;
+  - `provider_null_confidence.json` (§5.4.1).
 - Invalid examples:
-  - `withheld_with_score.json`;
-  - `withheld_with_evidence.json`;
-  - `insufficient_evidence_nonzero_confidence.json`;
-  - `estimated_with_reason.json`;
-  - `estimated_null_score.json`;
-  - `null_score_without_status.json`;
-  - `warming_on_withheld.json`;
-  - `valid_until_before_computed.json`;
-  - `context_free_text_value.json`;
-  - `context_unknown_window.json`.
+  - `withheld_with_score.json`, `withheld_with_evidence.json`, `withheld_with_basis.json`;
+  - `abstention_with_confidence.json`, `abstention_with_null_score.json`,
+    `abstention_with_direction.json`, `abstention_without_reason.json`;
+  - `estimated_with_reason.json`, `estimated_null_score.json`, `stated_without_value.json`;
+  - `status_missing.json` (§6.4), `status_stale.json` (not a 1.4 status);
+  - `warming_on_withheld.json`, `not_granted_on_insufficient_evidence.json`;
+  - `multimodal_estimated_without_modalities.json`;
+  - `null_confidence_non_provider.json`,
+    `baseline_version_without_basis.json`, `duplicate_member.json`;
+  - `context_free_text_value.json`, `context_unknown_vocab_value.json`,
+    `context_unknown_window.json`, `context_inferred_without_confidence.json`.
 
 Producer conformance, which a producer claiming 1.4 SHOULD demonstrate:
 
@@ -503,52 +581,97 @@ Producer conformance, which a producer claiming 1.4 SHOULD demonstrate:
 
 | Step | What | Gate |
 | --- | --- | --- |
-| 1 | This RFC reviewed and Accepted | Open questions 1–3 resolved |
+| 1 | This RFC reviewed and Accepted | Open questions resolved (done in draft 3, §13); design review applied (draft 4) |
 | 2 | 1.4 schema, examples, test vectors, strict validator | CI green; README status table updated |
 | 3 | At least one producer emits 1.4 | Producer conformance (§11) |
 | 4 | At least one consumer applies §10 | The unknown-≠-zero behaviour from 1.3 is preserved |
 
 1.4 is cut when steps 2 and 3 land.
 
-## 13. Open questions
+## 13. Resolved questions
 
-1. **Should `status` be required on every 1.4 reading?** This draft requires it only on
-   null-score readings (§6.4), as the smallest tightening that fixes §2.2. Requiring it
-   everywhere lets consumers branch on one field instead of inferring `estimated` from
-   absence. The cost is one field per reading for every producer. Pre-stable rules allow
-   either.
-   *Proposed resolution:* require it on every reading.
-2. **Should `withheld` exist on the wire?** It tells a consumer that a member exists
-   (§5.1.1). The alternative is omission, which brings back the ambiguity in §2.1.
-   *Proposed resolution:* keep `withheld`, limited to members the consumer asked for, with
-   visibility of the denial decided by the consent system (§5.1.1).
-3. **`stated` confidence.** Should a statement always carry `confidence: 1`, or may a
-   producer discount statements that contradict strong evidence?
-   *Proposed resolution:* default to `1`. A producer MAY discount, and consumers still
-   prefer `stated` readings (§5.1.2).
-4. **Context vocabularies.** Should the five canonical context fields have closed value
-   enums in the schema, or stay open tokens with an appendix as drafted?
-   *Proposed resolution:* closed enums for the five canonical fields. Context is the most
-   identifying part of a payload, and the token pattern still admits values such as
-   product names. Extensions use non-canonical field names.
-5. **`fixed_scale` naming.** The alternative is `absolute`. `fixed_scale` was chosen
-   because these scores are still normalized onto `[0, 1]`, just not against a person
-   or a population.
-6. **`baseline_status`.** Deprecate it in 1.5 once `basis` is populated, or keep it as a
-   payload-level summary?
-   *Proposed resolution:* deprecate in 1.5.
-7. **Provider readings without confidence.** Many platform scores relayed with
-   `inference_mode: external_provider` carry no uncertainty, yet `confidence` is required,
-   so producers must invent one. Options: allow `confidence: null` on `external_provider`
-   readings, or keep it required and require producers to document how the value was
-   assigned.
-8. **Baseline versions.** `basis` says what a score is relative to, but not which version
-   of that reference. When a person's baseline shifts, earlier and later readings with the
-   same `basis` are not comparable. Should a reading carry a baseline version identifier,
-   or is that left to producer metadata?
+Draft 3 resolves every open question from drafts 1 and 2.
+
+1. **Is `status` required on every 1.4 reading?** Yes (§6.4). Consumers branch on one
+   field instead of inferring `estimated` from absence, at the cost of one field per
+   reading.
+2. **Does `withheld` exist on the wire?** Yes. It applies only to members the consumer
+   asked for, and the consent system decides on the person's behalf whether a denial is
+   shown as `withheld` or as omission (§5.1.1).
+3. **`stated` confidence.** Defaults to `1`. A producer MAY discount a statement that
+   contradicts strong evidence and SHOULD document how. Consumers still prefer `stated`
+   readings (§5.1.2).
+4. **Context vocabularies.** Closed enums for every canonical field, enforced by the
+   schema (Appendix A). Context is the most identifying part of a payload, and the token
+   pattern alone still admits values such as product names. Extensions use non-canonical
+   field names.
+5. **`fixed_scale` naming.** Kept. These scores are still normalized onto `[0, 1]`, just
+   not against a person or a population, so `absolute` would mislead.
+6. **`baseline_status`.** Retained in 1.4 as an informative payload-level summary and
+   scheduled for deprecation in 1.5, once producers populate `basis`.
+7. **Provider readings without confidence.** `confidence` MAY be `null`, only on
+   `external_provider` readings (§5.4.1). Producers no longer invent a value.
+8. **Baseline versions.** An optional per-reading `baseline_version` (§5.3.1).
+
+Design decisions recorded with draft 4, from a review of wire size and rule count:
+
+9. **Abstentions are lean.** An abstention is `name`, `status`, `reason`, `window_ids`
+   (§5.1). Draft 3 required the full value shape with `score: null` and `confidence: 0`,
+   which made a producer invent a confidence for an estimate that did not exist and
+   cost nearly three times the bytes per abstention.
+10. **No `stale` status.** Freshness is decided by the consumer's clock against
+    `valid_until` (§5.4). A `stale` status was a second, producer-side encoding of the
+    same fact that could disagree with the first, and needed its own reason rule, two
+    STRICT checks and special cases in the categorical and modality rules.
+11. **`stated` is encoded once.** `status: stated` is authoritative; `stated://` and
+    `external_provider` are conventions, not cross-field rules (§5.1.2).
+
+Scope decision recorded with draft 3: **environment** context lands in 1.4 as five
+coarse `meta.context` fields (§7.2). A **work-state** domain (operational signals such as
+corrections, ambiguity, context fragmentation and decision conflict) is deferred to a
+separate RFC targeting 1.5. It needs member definitions and modality rules in the style
+of RFC-HSI-0010, and adding a domain to the closed `axes` set requires its own schema
+bump.
+
+## Appendix A. Context field vocabularies
+
+Closed vocabularies for the canonical `meta.context` fields. Producers MUST use these
+values. A value that does not fit MUST NOT be forced into the nearest token; the field is
+omitted instead.
+
+| Field | Group | Values |
+| --- | --- | --- |
+| `activity` | activity | `still`, `walking`, `running`, `cycling`, `in_vehicle`, `exercising` |
+| `work_context` | work | `focused_work`, `collaborative_work`, `meeting`, `communication`, `break`, `off_work` |
+| `time_of_day` | time | `night`, `early_morning`, `morning`, `afternoon`, `evening` |
+| `app_category` | work | `communication`, `productivity`, `development`, `browsing`, `media`, `social`, `gaming`, `other` |
+| `focus_window` | work | boolean: inside a focus block the person set |
+| `place_type` | environment | `home`, `workplace`, `transit`, `outdoors`, `public_indoor`, `other` |
+| `air_quality_band` | environment | `good`, `moderate`, `poor`, `very_poor` |
+| `noise_band` | environment | `quiet`, `moderate`, `loud` |
+| `light_band` | environment | `dark`, `dim`, `normal`, `bright` |
+| `temperature_band` | environment | `cold`, `cool`, `comfortable`, `warm`, `hot` |
+
+Band thresholds (for example which particulate level counts as `poor`) are producer
+policy in 1.4 and SHOULD be documented by the producer. `place_type` is a category only:
+the producer MUST NOT emit it at a granularity that, combined with time, identifies a
+specific place.
 
 ## Change log
 
+- **Draft 4 (2026-10-20)** — Design review (§13 Q9–Q11): abstentions reduced to `name`,
+  `status`, `reason`, `window_ids`, with no `score` or `confidence`; `stale` status
+  removed in favour of the `valid_until` consumer rule; `stated://` and
+  `external_provider` on stated readings made conventions rather than schema rules.
+  `HSI-1.4-VALID-UNTIL-ORDER` and `HSI-1.4-STALE-NOT-EXPIRED` dropped. Schema
+  conditionals reduced from nine to six; downgrade drops abstentions.
+
+- **Draft 3 (2026-10-20)** — Open questions resolved (§13): `status` required on every
+  reading; `confidence: null` allowed on `external_provider` readings; optional
+  `baseline_version`; closed context vocabularies (Appendix A) with five new environment
+  fields; `stated` readings enforced to use `stated://` and `external_provider`;
+  `baseline_status` deprecation scheduled for 1.5; work-state domain deferred to 1.5.
+  Schema, strict validator and examples added.
 - **Draft 2** — `corrected` renamed `stated` and extended to standalone self-report;
   consent-controlled visibility of `withheld`; proposed resolutions for questions 1–4
   and 6; new questions 7 (provider confidence) and 8 (baseline versions).
