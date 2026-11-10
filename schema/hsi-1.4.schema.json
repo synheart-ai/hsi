@@ -175,6 +175,19 @@
       "$comment": "RFC-HSI-0012 §5.3. What a normalized score is relative to. Absent means unspecified and MUST NOT be read as personal. meta.provenance.baseline_status is informative only and MUST NOT be used in place of basis to gate a reading."
     },
 
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "lower", "upper"],
+      "properties": {
+        "kind": { "const": "band" },
+        "lower": { "$ref": "#/$defs/score01" },
+        "upper": { "$ref": "#/$defs/score01" },
+        "label": { "$ref": "#/$defs/token" }
+      },
+      "$comment": "RFC-HSI-0012 §5.4.2. Set when score is reported coarser than the producer's estimate: the estimate lies in [lower, upper] and score is the value reported for that band. Absent means score is the estimate at full resolution. HSI-VALIDATE-STRICT checks lower < upper and lower <= score <= upper."
+    },
+
     "axis_reading": {
       "type": "object",
       "additionalProperties": false,
@@ -212,6 +225,7 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "$comment": "RFC-HSI-0012 §5.3.1: opaque identifier of the version of the reference the score is relative to. Two readings with the same basis are comparable only when their baseline_version also matches. Requires basis."
         },
+        "resolution": { "$ref": "#/$defs/resolution" },
         "valid_until": {
           "type": "string",
           "format": "date-time",
@@ -292,7 +306,8 @@
                 { "required": ["baseline_version"] },
                 { "required": ["valid_until"] },
                 { "required": ["modalities_used"] },
-                { "required": ["confidence_breakdown"] }
+                { "required": ["confidence_breakdown"] },
+                { "required": ["resolution"] }
               ]
             }
           }
@@ -317,14 +332,15 @@
           }
         },
         {
-          "$comment": "RFC-HSI-0010 §8: discriminated union on direction == categorical. Abstentions have no direction, so this applies to value-bearing readings only.",
+          "$comment": "RFC-HSI-0010 §8: discriminated union on direction == categorical. Abstentions have no direction, so this applies to value-bearing readings only. A categorical label is already coarse, so it carries no resolution (RFC-HSI-0012 §5.4.2).",
           "if": {
             "properties": { "direction": { "const": "categorical" } },
             "required": ["direction"]
           },
           "then": {
             "properties": { "score": { "type": "null" } },
-            "required": ["label", "categories"]
+            "required": ["label", "categories"],
+            "not": { "required": ["resolution"] }
           },
           "else": {
             "properties": { "score": { "$ref": "#/$defs/score01" } },

@@ -681,6 +681,8 @@ def _validate_strict_14(payload: dict[str, Any]) -> None:
     - HSI-1.4-CONTEXT-UNKNOWN-WINDOW: meta.context keys must be keys of /windows
     - HSI-1.4-CONTEXT-CONFIDENCE-MISSING: inferred context fields must carry confidence
       (defense-in-depth, primary at BASIC)
+    - HSI-1.4-RESOLUTION-RANGE: a band's lower bound must be below its upper bound and
+      the reported score must lie within the band (§5.4.2)
 
     The §5.6 no-silent-omission rule cannot be checked from a single payload; it is a
     producer conformance test (RFC-HSI-0012 §11).
@@ -818,6 +820,21 @@ def _validate_strict_14(payload: dict[str, Any]) -> None:
                 if sid not in prov_sources:
                     raise StrictValidationError(
                         f"axis reading references unknown provenance source id '{sid}'"
+                    )
+
+        resolution = r.get("resolution")
+        if isinstance(resolution, dict):
+            lower, upper, score = resolution.get("lower"), resolution.get("upper"), r.get("score")
+            if isinstance(lower, (int, float)) and isinstance(upper, (int, float)):
+                if lower >= upper:
+                    raise StrictValidationError(
+                        f"HSI-1.4-RESOLUTION-RANGE: axes.{domain_key}[] reading '{name}' "
+                        f"has a band whose lower bound {lower} is not below its upper bound {upper}"
+                    )
+                if isinstance(score, (int, float)) and not lower <= score <= upper:
+                    raise StrictValidationError(
+                        f"HSI-1.4-RESOLUTION-RANGE: axes.{domain_key}[] reading '{name}' "
+                        f"reports score {score} outside its band [{lower}, {upper}]"
                     )
 
         if isinstance(name, str):

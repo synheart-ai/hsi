@@ -1,0 +1,124 @@
+{
+  "hsi_version": "1.4",
+  "observed_at_utc": "2026-10-20T09:01:00Z",
+  "computed_at_utc": "2026-10-20T09:01:00Z",
+  "producer": {
+    "name": "Example Producer",
+    "version": "1.4.0"
+  },
+  "windows": {
+    "w_0900": {
+      "start_utc": "2026-10-20T09:00:00Z",
+      "end_utc": "2026-10-20T09:01:00Z",
+      "label": "realtime"
+    }
+  },
+  "axes": {
+    "physiological": [
+      {
+        "name": "hrv_rmssd_norm",
+        "score": 0.44,
+        "confidence": 0.8,
+        "direction": "higher_is_more",
+        "status": "estimated",
+        "basis": "personal_stratum",
+        "valid_until": "2026-10-20T09:03:00Z",
+        "inference_mode": "probabilistic_model",
+        "model_id": "model://hrv_rmssd_norm_v1",
+        "window_ids": [
+          "w_0900"
+        ],
+        "evidence_source_ids": [
+          "watch_ble_1"
+        ],
+        "baseline_version": "bl-2026-10-14.3"
+      }
+    ],
+    "digital": [
+      {
+        "name": "interruption_pressure",
+        "score": 0.6,
+        "confidence": 0.8,
+        "direction": "lower_is_more",
+        "status": "estimated",
+        "basis": "fixed_scale",
+        "valid_until": "2026-10-20T09:03:00Z",
+        "inference_mode": "deterministic_rule",
+        "model_id": "rulepack://interruptions_v2",
+        "window_ids": [
+          "w_0900"
+        ],
+        "evidence_source_ids": [
+          "phone_os_events"
+        ]
+      }
+    ],
+    "cognitive": [
+      {
+        "name": "cognitive_load",
+        "score": 0.5,
+        "confidence": 0.8,
+        "direction": "lower_is_more",
+        "status": "estimated",
+        "basis": "population",
+        "valid_until": "2026-10-20T09:03:00Z",
+        "inference_mode": "composite",
+        "model_id": "model://cognitive_load_v1",
+        "window_ids": [
+          "w_0900"
+        ],
+        "evidence_source_ids": [
+          "watch_ble_1",
+          "phone_os_events"
+        ],
+        "modalities_used": [
+          "physiological",
+          "digital"
+        ],
+        "resolution": {
+          "kind": "band",
+          "lower": 0.66,
+          "upper": 1.0,
+          "label": "high"
+        }
+      }
+    ]
+  },
+  "privacy": {
+    "contains_pii": false,
+    "raw_biosignals_allowed": false,
+    "derived_metrics_allowed": true
+  },
+  "meta": {
+    "ids": {
+      "hsi_id": "14000000-0000-4000-8000-000000000041"
+    },
+    "provenance": {
+      "sources": {
+        "watch_ble_1": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 2,
+          "device_class": "watch",
+          "signals": [
+            "ppg",
+            "hrv"
+          ],
+          "transport": "ble"
+        },
+        "phone_os_events": {
+          "type": "sensor",
+          "quality": 0.9,
+          "degraded": false,
+          "source_tier": 1,
+          "device_class": "phone",
+          "signals": [
+            "touch"
+          ],
+          "transport": "inproc"
+        }
+      }
+    }
+  }
+}

@@ -7,14 +7,15 @@ HSI uses `MAJOR.MINOR` versioning and is pre-stable — minor versions MAY intro
 
 ## [Unreleased]
 
-### Added (draft, HSI 1.4 — RFC-HSI-0012 draft 4)
+### Added (draft, HSI 1.4 — RFC-HSI-0012 draft 5)
 
 - Draft canonical schema `schema/hsi-1.4.schema.json`. Every `axis_reading` carries a required `status` (`estimated`, `stated`, `insufficient_evidence`, `withheld`). Abstentions are lean: `name`, `status`, `reason`, `window_ids`, with no `score` or `confidence`. Also adds `reason_detail`, `basis` and optional `baseline_version` for what a score is relative to, and producer-set `valid_until`. Six conditionals bind status to the value-bearing or abstention shape (RFC-HSI-0012 §6.3). A republished estimate stays `estimated`; consumers must not act on a reading past its `valid_until`.
 - `confidence` MAY be `null`, only on `external_provider` readings. New reserved `model_id` scheme `stated://`, recommended (not enforced) for `stated` readings.
 - Optional `meta.context` frame keyed by window id. Ten canonical fields with closed vocabularies, five of them environment fields (`place_type`, `air_quality_band`, `noise_band`, `light_band`, `temperature_band`). Each field records whether it was observed, inferred or stated.
 - `modalities_used` is required only on `estimated` readings in multimodal domains (RFC-HSI-0012 §6.5). Categorical members abstain with the same lean shape (§6.6).
-- Strict validator path `tests/hsi_validate.py::_validate_strict_14` with `HSI-1.4-DUPLICATE-MEMBER`, `HSI-1.4-CONTEXT-UNKNOWN-WINDOW` and `HSI-1.4-CONTEXT-CONFIDENCE-MISSING`.
-- 9 valid and 22 invalid 1.4 examples, and `test-vectors/v1.4/minimal.json`.
+- Optional per-reading `resolution` for a score reported coarser than the producer's estimate: `kind: band` with the band's `lower` and `upper` bounds and an optional `label` (RFC-HSI-0012 §5.4.2). Forbidden on abstentions and categorical readings. A 1.3 downgrade drops coarsened readings.
+- Strict validator path `tests/hsi_validate.py::_validate_strict_14` with `HSI-1.4-DUPLICATE-MEMBER`, `HSI-1.4-CONTEXT-UNKNOWN-WINDOW`, `HSI-1.4-CONTEXT-CONFIDENCE-MISSING` and `HSI-1.4-RESOLUTION-RANGE`.
+- 10 valid and 27 invalid 1.4 examples, and `test-vectors/v1.4/minimal.json`.
 
 ### Deprecated (draft, HSI 1.4)
 

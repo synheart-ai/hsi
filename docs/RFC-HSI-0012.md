@@ -2,7 +2,7 @@
 
 ## HSI 1.4 — Reading Status, Basis and Freshness
 
-- **Status**: Draft 4 — design tightened after review (lean abstentions, four statuses); ready for acceptance
+- **Status**: Draft 5 — adds `resolution` for coarsened scores (§5.4.2); pending review
 - **Created**: 2026-10-19
 - **Type**: Minor (pre-stable; additive on 1.3 except the tightening in §6.4, which makes `status` required)
 - **Target**: HSI 1.4
@@ -294,14 +294,63 @@ be `null`, but only when `inference_mode` is `external_provider` (§13 Q7). Prod
 NOT assign an arbitrary value to such a reading. A consumer with a confidence floor treats
 a `null` confidence as failing it unless the consumer has decided to trust that provider.
 
+### 5.4.2 `resolution`
+
+```json
+"resolution": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "lower", "upper"],
+  "properties": {
+    "kind":  { "const": "band" },
+    "lower": { "$ref": "#/$defs/score01" },
+    "upper": { "$ref": "#/$defs/score01" },
+    "label": { "$ref": "#/$defs/token" }
+  }
+}
+```
+
+A consent system may let a consumer receive a member only coarsely (§3). The producer
+then reports a value that stands for a band, not its estimate. Without a marker, a
+consumer reads that value as a point estimate: it charts a trend across readings that
+only changed band, or compares a threshold that falls inside the band. `resolution`
+says that a score is coarse and how coarse:
+
+```json
+{ "name": "focus", "status": "estimated", "score": 0.83,
+  "resolution": { "kind": "band", "lower": 0.66, "upper": 1.0, "label": "high" }, ... }
+```
+
+Rules:
+
+- A producer that reports a score coarser than its estimate MUST set `resolution`.
+  Absent means `score` is the producer's estimate at full resolution.
+- `kind: band`: the estimate lies in `[lower, upper]`, and `score` is the value the
+  producer reports for that band. `lower` MUST be below `upper` and `score` MUST lie
+  within the band (HSI-VALIDATE-STRICT, §6.8). Producers SHOULD report the band's
+  midpoint.
+- `label` is an OPTIONAL producer-defined name for the band. Consumers MUST NOT branch on
+  it; the bounds are the contract. Band edges are producer policy and SHOULD be
+  documented by the producer.
+- Value-bearing numeric readings only. `resolution` MUST be absent on abstentions, and on
+  categorical readings, whose label is already coarse.
+- `confidence`, `basis`, `baseline_version` and `valid_until` keep their meaning: they
+  describe the estimate the band was taken from.
+- Consumers MUST NOT treat a reading with `resolution` as more precise than its band.
+  Two readings in the same band are equal; a threshold inside `(lower, upper)` cannot be
+  decided from the reading, so the consumer treats that comparison as unknown.
+
+Which consumers receive which members coarsely stays with the consent system, as for
+`withheld` (§3). HSI carries the outcome, never the grant.
+
 ### 5.5 Field matrix
 
-| `status` | `score` | `confidence` | `reason` | `basis`, `valid_until` | `evidence_source_ids` | `modalities_used` (multimodal domains) |
-| --- | --- | --- | --- | --- | --- | --- |
-| `estimated` | required non-null (categorical: null + `label`) | required (`null` only on `external_provider`, §5.4.1) | absent | SHOULD | required | required |
-| `stated` | required non-null (categorical: null + `label`) | required | absent | MAY | required | MAY |
-| `insufficient_evidence` | absent | absent | required | absent | MAY (the sources that were tried) | absent |
-| `withheld` | absent | absent | `not_granted` | absent | absent | absent |
+| `status` | `score` | `confidence` | `reason` | `basis`, `valid_until` | `resolution` | `evidence_source_ids` | `modalities_used` (multimodal domains) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `estimated` | required non-null (categorical: null + `label`) | required (`null` only on `external_provider`, §5.4.1) | absent | SHOULD | required when coarsened; absent on categorical | required | required |
+| `stated` | required non-null (categorical: null + `label`) | required | absent | MAY | required when coarsened; absent on categorical | required | MAY |
+| `insufficient_evidence` | absent | absent | required | absent | absent | MAY (the sources that were tried) | absent |
+| `withheld` | absent | absent | `not_granted` | absent | absent | absent | absent |
 
 ### 5.6 No silent omission
 
@@ -327,8 +376,8 @@ validate each payload against the schema for its declared version (`versioning.m
 
 ### 6.2 `axis_reading`
 
-Add `status` (required, §6.4) and `reason`, `reason_detail`, `basis`, `baseline_version`
-and `valid_until` (optional) (§5). The base `required` list becomes `name`, `status`,
+Add `status` (required, §6.4) and `reason`, `reason_detail`, `basis`, `baseline_version`,
+`resolution` and `valid_until` (optional) (§5). The base `required` list becomes `name`, `status`,
 `window_ids`; the remaining 1.3 required fields move under the value-bearing branch.
 `confidence` becomes nullable under §5.4.1.
 `additionalProperties: false` stays, so a 1.3 validator rejects these fields. That is
@@ -344,11 +393,12 @@ discriminator:
    `reason_detail` forbidden.
 2. `status ∈ {insufficient_evidence, withheld}` ⇒ `reason` required; `score`,
    `confidence`, `direction`, `basis`, `baseline_version`, `valid_until`,
-   `modalities_used` and `confidence_breakdown` forbidden.
+   `modalities_used`, `confidence_breakdown` and `resolution` forbidden.
 3. `status == withheld` ⇒ `reason: not_granted`; `evidence_source_ids`, `model_id`,
    `inference_mode`, `reason_detail` and `notes` forbidden. Any other status ⇒ `reason`
    is not `not_granted`.
-4. `direction == categorical` ⇒ `score: null`, `label` and `categories` required. Any
+4. `direction == categorical` ⇒ `score: null`, `label` and `categories` required,
+   `resolution` forbidden (§5.4.2). Any
    other present direction, or none ⇒ `score` (if present) non-null, `label` and
    `categories` forbidden (the 1.3 discriminator, unchanged in form).
 5. `confidence: null` ⇒ `inference_mode == external_provider` (§5.4.1).
@@ -390,6 +440,7 @@ Checks the schema cannot express:
 | `HSI-1.4-DUPLICATE-MEMBER` | Two readings for the same member in one domain with overlapping `window_ids`, unless exactly one is `stated` |
 | `HSI-1.4-CONTEXT-UNKNOWN-WINDOW` | A `meta.context` key that is not a key of `windows` |
 | `HSI-1.4-CONTEXT-CONFIDENCE-MISSING` | A context field with `source: inferred` and no `confidence` (also enforced at BASIC) |
+| `HSI-1.4-RESOLUTION-RANGE` | A `resolution` band whose `lower` is not below its `upper`, or a `score` outside `[lower, upper]` (§5.4.2) |
 
 The 1.3 STRICT rules carry over unchanged, except:
 
@@ -511,7 +562,9 @@ reading to drive behaviour only when all of the following hold:
 - `valid_until` has not passed;
 - `basis ∈ {personal_stratum, personal_pooled}`, or `fixed_scale` for members the
   consumer has decided are meaningful on a fixed scale;
-- `confidence` is at or above the consumer's own floor.
+- `confidence` is at or above the consumer's own floor;
+- for a reading with `resolution`, the decision depends only on its band: a threshold
+  inside `(lower, upper)` is unknown, not met or missed.
 
 Readings that fail any check are unknown, as in 1.3. Their `reason` lets the consumer
 tell "no sensor" (`no_signal`) from "still calibrating" (`warming`) from "not shared with
@@ -522,7 +575,7 @@ learning your baseline" or "Not shared with this app". Never show a number for a
 that is not `estimated` or `stated`. Show `basis` as "compared with your usual" versus
 "compared with people in general".
 
-**Libraries and SDKs.** Expose `status`, `reason`, `basis` and `valid_until` as typed
+**Libraries and SDKs.** Expose `status`, `reason`, `basis`, `resolution` and `valid_until` as typed
 fields. Provide a single helper, such as `isActionable(reading, now)`, that implements
 the action check above with the floor as a parameter.
 
@@ -530,8 +583,9 @@ the action check above with the floor as a parameter.
 
 - strips `status`, `reason`, `reason_detail`, `basis`, `baseline_version`,
   `valid_until` and `meta.context`;
-- drops `withheld` and `stated` readings, and readings with `confidence: null`, none of
-  which 1.3 can represent faithfully;
+- drops `withheld` and `stated` readings, readings with `confidence: null`, and readings
+  with `resolution`, none of which 1.3 can represent faithfully (a 1.3 consumer would
+  read a coarsened score as a point estimate);
 - drops `insufficient_evidence` readings. 1.3 has a `score: null` placeholder, but
   rebuilding one needs a `direction`, `model_id` and a confidence the abstention does not
   carry, and the 1.3 null-score explanation is payload-level (§2.2). Omission is the
@@ -552,7 +606,8 @@ The 1.4 schema PR ships with:
   - `basis_mixed.json` (personal, population and fixed-scale readings, with a `baseline_version`);
   - `context_frame.json` (all ten canonical fields plus an extension field);
   - `categorical_estimated_and_abstention.json`;
-  - `provider_null_confidence.json` (§5.4.1).
+  - `provider_null_confidence.json` (§5.4.1);
+  - `resolution_band.json` (a coarsened score beside full-resolution ones, §5.4.2).
 - Invalid examples:
   - `withheld_with_score.json`, `withheld_with_evidence.json`, `withheld_with_basis.json`;
   - `abstention_with_confidence.json`, `abstention_with_null_score.json`,
@@ -564,7 +619,10 @@ The 1.4 schema PR ships with:
   - `null_confidence_non_provider.json`,
     `baseline_version_without_basis.json`, `duplicate_member.json`;
   - `context_free_text_value.json`, `context_unknown_vocab_value.json`,
-    `context_unknown_window.json`, `context_inferred_without_confidence.json`.
+    `context_unknown_window.json`, `context_inferred_without_confidence.json`;
+  - `resolution_on_abstention.json`, `resolution_on_categorical.json`,
+    `resolution_score_outside_band.json`, `resolution_inverted_bounds.json`,
+    `resolution_unknown_kind.json`.
 
 Producer conformance, which a producer claiming 1.4 SHOULD demonstrate:
 
@@ -626,6 +684,15 @@ Design decisions recorded with draft 4, from a review of wire size and rule coun
 11. **`stated` is encoded once.** `status: stated` is authoritative; `stated://` and
     `external_provider` are conventions, not cross-field rules (§5.1.2).
 
+Design decision recorded with draft 5:
+
+12. **Coarsened scores are marked.** When a consumer receives a member only coarsely,
+    the reading carries `resolution` with the band's bounds (§5.4.2). HSI already carries
+    the outcome of a denial (`withheld`); a coarsened score is the outcome of a partial
+    grant and needs the same visibility, or consumers read a band's representative value
+    as a point estimate. The bounds, not a label vocabulary, are the contract, so
+    producers keep their own band edges.
+
 Scope decision recorded with draft 3: **environment** context lands in 1.4 as five
 coarse `meta.context` fields (§7.2). A **work-state** domain (operational signals such as
 corrections, ambiguity, context fragmentation and decision conflict) is deferred to a
@@ -658,6 +725,12 @@ the producer MUST NOT emit it at a granularity that, combined with time, identif
 specific place.
 
 ## Change log
+
+- **Draft 5 (2026-11-09)** — Optional per-reading `resolution` (§5.4.2, §13 Q12): a
+  score reported coarser than the producer's estimate names its band (`kind: band`,
+  `lower`, `upper`, optional `label`). Forbidden on abstentions and categorical
+  readings; `HSI-1.4-RESOLUTION-RANGE` added to STRICT; the 1.3 downgrade drops
+  coarsened readings. One valid and five invalid examples.
 
 - **Draft 4 (2026-10-20)** — Design review (§13 Q9–Q11): abstentions reduced to `name`,
   `status`, `reason`, `window_ids`, with no `score` or `confidence`; `stale` status
